@@ -1,0 +1,57 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id               String    @id @default(cuid())
+  name             String
+  email            String    @unique
+  password         String
+  role             Role      @default(USER)
+  services         Service[]
+  passwordResetToken String?   // token temporário para reset de senha
+  passwordResetExpires DateTime? // validade do token
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+
+model Service {
+  id              String    @id @default(cuid())
+  name            String
+  type            ServiceType
+  target          String    // IP ou URL a ser monitorado
+  checkEveryS     Int       @default(60) // intervalo em segundos
+  status          Status    @default(UNKNOWN)
+  lastResponseMs  Int?      // tempo da última resposta em ms
+  sysName         String?   // para dados SNMP: nome do sistema
+  sysDescr        String?   // para dados SNMP: descrição do sistema
+  ownerId         String
+  owner           User      @relation(fields: [ownerId], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum ServiceType {
+  HTTP
+  PING
+  SNMP
+  WEBHOOK
+}
+
+enum Status {
+  UP
+  DOWN
+  UNKNOWN
+}
