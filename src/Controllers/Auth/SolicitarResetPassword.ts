@@ -10,7 +10,6 @@ export async function solicitarResetSenha(req: FastifyRequest, reply: FastifyRep
 
   const isEmail = (str: string) => /\S+@\S+\.\S+/.test(str);
 
-  // Busca usuário pelo email ou username (se quiser adicionar username, ajuste)
   const usuario = await req.server.prisma.user.findFirst({
     where: isEmail(user) ? { email: user } : { name: user },
   });
@@ -19,15 +18,13 @@ export async function solicitarResetSenha(req: FastifyRequest, reply: FastifyRep
     return reply.status(404).send({ error: "Usuário não encontrado." });
   }
 
-  // Gera token numérico de 4 dígitos como string
   const token = Math.floor(1000 + Math.random() * 9000).toString();
 
-  // Atualiza o usuário com token e validade de 10 minutos
   await req.server.prisma.user.update({
     where: { id: usuario.id },
     data: {
     passwordResetToken   : token,
-    passwordResetExpires: new Date(Date.now() + 10 * 60 * 1000), // +10 min
+    passwordResetExpires: new Date(Date.now() + 10 * 60 * 1000),
     },
   });
 

@@ -33,9 +33,10 @@ export function writeSnmpMetrics(serviceId: string, data: any) {
     .intField('interfacesCount', data.interfaces?.length ?? 0)
     .timestamp(new Date());
 
-  // Além disso, podemos gravar métricas para cada interface separadamente:
-  if (data.interfaces) {
-    data.interfaces.forEach((iface: any, i: number) => {
+  if (data.interfaces)
+  {
+    data.interfaces.forEach((iface: any, i: number) =>
+    {
       const ifacePoint = new Point('service_snmp_interface')
         .tag('serviceId', serviceId)
         .tag('interface', iface.description || `iface_${i}`)

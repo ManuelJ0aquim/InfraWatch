@@ -18,9 +18,7 @@ export async function getServiceMetrics(serviceId: string) {
     error(error: any) {
       throw error;
     },
-    complete() {
-      // não precisa fazer nada aqui
-    }
+    complete() {}
   });
 
   return rows;
