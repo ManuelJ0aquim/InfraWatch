@@ -14,7 +14,6 @@ export async function CheckPING(target: string, count: number = 4, timeout: numb
       received++;
       times.push(Date.now() - start);
     }
-
     await new Promise(resolve => setTimeout(resolve, 1000));
   }
 

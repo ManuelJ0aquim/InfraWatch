@@ -4,6 +4,6 @@ export async function startMonitoring()
 {
   console.log('🔍 Monitoramento iniciado...');
   await checkServices();
-  setInterval(async () => { await checkServices(); }, 1000);
+  setInterval(async () => { await checkServices(); }, 60 * 1000);
 }
 

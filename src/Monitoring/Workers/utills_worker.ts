@@ -4,12 +4,11 @@ import { NotificationController } from '../../Controllers/APIs/Notification';
 const notificationController = new NotificationController();
 
 const alertContacts = [
-  // { channel: 'email', to: 'marquessanches007@gmail.com' },
+  { channel: 'email', to: 'marquessanches007@gmail.com' },
   // { channel: 'twilio', to: '+244925560046' }
   // { channel: 'telegram', to: '123456789' },
   // { channel: 'slack', to: '#alertas' },
 ];
-
 
 async function sendAlert(channel: 'email' | 'slack' | 'telegram' | 'twilio', to: string, message: string)
 {
@@ -33,21 +32,20 @@ export async function checkServices()
 
     if (size === 0)
     {
-      console.log('✅ Todos os serviços estão operando normalmente.');
+      console.log('Todos os serviços estão operando normalmente.');
       return;
     }
-    console.log(issues);
-
+    // console.log(issues);
     while (i < size)
     {
       const issue = issues[i];
-      const message = `⚠️ Serviço ${issue.serviceName} está com problema: ${issue.description}`;
+      const message = `Serviço ${issue.serviceName} está com problema: ${issue.description}`;
 
       let j = 0;
       while (j < alertContacts.length)
       {
-        // const contact = alertContacts[j];
-        // await sendAlert(contact.channel as any, contact.to, message);
+        const contact = alertContacts[j];
+        await sendAlert(contact.channel as any, contact.to, message);
         j++;
       }
       i++;

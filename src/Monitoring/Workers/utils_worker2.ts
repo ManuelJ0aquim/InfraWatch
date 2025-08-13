@@ -2,6 +2,7 @@ import { CheckSNMP } from '../Checkers/CheckSNMP';
 import { CheckHTTP } from '../Checkers/CheckHTTP';
 import { CheckPING } from '../Checkers/CheckPING';
 import { CheckWebhook } from '../Checkers/CheckWEBHOOK';
+import { getIO } from '../../socket';
 import { PrismaClient, Service, ServiceType, Status } from '@prisma/client';
 import { writeMetric, writeSnmpMetrics, writePingMetrics, writeHttpMetrics, writeWebhookMetrics } from '../../influxdb';
 
@@ -40,6 +41,8 @@ async function processServiceResult(service: Service, result: any)
   
     if (service.type === ServiceType.SNMP)
     {
+      const io = getIO();
+      io.emit("snmpService", result);
       writeSnmpMetrics(service.id.toString(), result);
   
       if (!result.sysName)
@@ -63,14 +66,19 @@ async function processServiceResult(service: Service, result: any)
       });
     }
     else if (service.type === ServiceType.PING)
-      {
+    {
+      const io = getIO();
+      io.emit("pingService", result);
       writePingMetrics(service.id.toString(), result);
   
       if (result.status !== Status.UP)
       {
-        problems.push({
+        problems.push(
+        {
           serviceName: service.name,
-          description: `Status: ${result.status}, perda de pacotes: ${result.lossPercent}%`,
+          description: `Status: ${result.status}, Tempo de Processamento: ${result.minMs / result.avgMs / result.maxMs / result.mdevMs},
+            perda de pacotes: ${result.lossPercent}%, Pacotes Transmitidos: ${result.transmitted},
+            Pacotes Recebidos: ${result.received}, Quantidade de dados(bytes) ${result.data.length}`,
         });
       }
   
@@ -86,6 +94,8 @@ async function processServiceResult(service: Service, result: any)
     }
     else if (service.type === ServiceType.HTTP)
     {
+      const io = getIO();
+      io.emit("httpService", result);
       writeHttpMetrics(service.id.toString(), result);
   
       if (result.status !== Status.UP)
@@ -100,6 +110,8 @@ async function processServiceResult(service: Service, result: any)
     }
     else if (service.type === ServiceType.WEBHOOK)
     {
+      const io = getIO();
+      io.emit("webhookService", result);
       writeWebhookMetrics(service.id.toString(), result);
   
       if (result.status !== Status.UP)

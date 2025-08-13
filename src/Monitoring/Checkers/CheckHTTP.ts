@@ -10,7 +10,8 @@ export async function CheckHTTP(target: string)
   const timings: Record<string, number> = {};
   const startTotal = performance.now();
 
-  try {
+  try
+  {
     // 🔹 Tempo DNS
     const startDNS = performance.now();
     const { address } = await lookup(new URL(target).hostname);
@@ -34,7 +35,9 @@ export async function CheckHTTP(target: string)
       headers: res.headers
     };
 
-  } catch (err: any) {
+  }
+  catch (err: any)
+  {
     const totalTime = performance.now() - startTotal;
     return {
       status: 'DOWN',

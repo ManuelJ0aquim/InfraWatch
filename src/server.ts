@@ -2,12 +2,13 @@ import Fastify from 'fastify';
 import fastifySwagger from 'fastify-swagger';
 import { RegisterAllRoutes } from "./AllRoutes/RegisterAllRoutes";
 import { startMonitoring } from './Monitoring/Workers/worker';
+import http from 'http';
+import { initSocket } from './socket';
 
-const server = Fastify({
-    logger: false,
-}); 
+async function start() {
+  const fastify = Fastify({ logger: false });
 
-server.register(fastifySwagger, {
+  fastify.register(fastifySwagger, {
     routePrefix: '/docs',
     swagger: {
       info: {
@@ -23,20 +24,21 @@ server.register(fastifySwagger, {
     exposeRoute: true,
   });
 
-const start = async () =>
-{
-  try
-  {
-    await RegisterAllRoutes(server);
-    startMonitoring();
-    await server.listen({ port: 3000 });
-    console.log('Servidor rodando em http://localhost:3000');
-  }
-  catch (err)
-  {
-    server.log.error(err);
-    process.exit(1);
-  }
-};
+  await RegisterAllRoutes(fastify);
 
-start();
+  const httpServer = http.createServer(fastify.server);
+
+  // Inicializa Socket.IO e guarda a instância
+  initSocket(httpServer);
+
+  startMonitoring();
+
+  httpServer.listen(3000, '0.0.0.0', () => {
+    console.log('Servidor rodando em http://localhost:3000');
+  });
+}
+
+start().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

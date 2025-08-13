@@ -60,7 +60,7 @@ export async function CheckSNMP(target: string, community = 'public', timeoutMs 
   try {
     const baseData: SNMPData = { responseMs: 0 };
 
-    // 1️⃣ Dados principais
+    // Dados principais
     const varbinds = await getOids(Object.values(OIDS));
     varbinds.forEach(vb => {
       const key = Object.keys(OIDS).find(k => OIDS[k as keyof typeof OIDS] === vb.oid) as keyof SNMPData;
@@ -73,7 +73,7 @@ export async function CheckSNMP(target: string, community = 'public', timeoutMs 
       baseData.memUsagePercent = Number(((1 - (baseData.memAvailKB / baseData.memTotalKB)) * 100).toFixed(2));
     }
 
-    // 2️⃣ Interfaces
+    // Interfaces
     const [ifDescr, ifStatus, ifInOctets, ifOutOctets] = await Promise.all([
       walk('1.3.6.1.2.1.2.2.1.2'),  // Nome
       walk('1.3.6.1.2.1.2.2.1.8'),  // Status
