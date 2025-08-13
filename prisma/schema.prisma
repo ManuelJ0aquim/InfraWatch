@@ -31,9 +31,34 @@ model Service {
   sysName         String?   // para dados SNMP: nome do sistema
   sysDescr        String?   // para dados SNMP: descrição do sistema
   ownerId         String
+  slas            Sla[]
+  slis            Sli[]
   owner           User      @relation(fields: [ownerId], references: [id])
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+}
+
+model Sla{
+  id             String   @id @default(cuid())
+  serviceId      String
+  service        Service  @relation(fields: [serviceId], references: [id])
+  targetSli      Float
+  achievedSli    Float
+  periodStart    DateTime
+  periodEnd      DateTime
+  status         SLAStatus @default(PENDING)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+}
+
+model Sli{
+  id         String   @id @default(cuid())
+  serviceId  String
+  service    Service  @relation(fields: [serviceId], references: [id])
+  achieved   Float
+  target     Float
+  timestamp  DateTime @default(now())
 }
 
 enum Role {
@@ -53,3 +78,10 @@ enum Status {
   DOWN
   UNKNOWN
 }
+
+enum SLAStatus {
+  PENDING
+  MET
+  BREACHED
+}
+
