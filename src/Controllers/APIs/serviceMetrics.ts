@@ -15,7 +15,7 @@ export async function queryMetrics(serviceId: string, measurement: string)
     const rows = await queryApi.collectRows(query);
     return rows;
   }
-  catch (error)
+  catch (error: any)
   {
     throw new Error(`Erro na consulta InfluxDB: ${error.message}`);
   }
@@ -26,7 +26,7 @@ export async function getPingMetrics(serviceId: string)
   try
   {
     const rows = await queryMetrics(serviceId, 'ping_metrics');
-    const formattedRows = rows.map(row => ({
+    const formattedRows = rows.map((row: any) => ({
       time: row._time,
       lossPercent: row.lossPercent || 0,
       minMs: row.minMs || 0,
@@ -49,7 +49,7 @@ export async function getSnmpMetrics(serviceId: string)
   try
   {
     const rows = await queryMetrics(serviceId, 'snmp_metrics');
-    const formattedRows = rows.map(row => ({
+    const formattedRows = rows.map((row: any) => ({
       time: row._time,
       sysName: row.sysName || '',
       sysDescr: row.sysDescr || '',
@@ -73,7 +73,7 @@ export async function getHttpMetrics(serviceId: string)
   {
     const rows = await queryMetrics(serviceId, 'http_metrics');
     
-    const formattedRows = rows.map(row => ({
+    const formattedRows = rows.map((row: any) => ({
       time: row._time,
       status: row.status || 'unknown',
       httpStatus: row.httpStatus || 0,
@@ -86,7 +86,7 @@ export async function getHttpMetrics(serviceId: string)
     }));
     return formattedRows;
   }
-  catch (error)
+  catch (error: any)
   {
     throw new Error(`Erro ao buscar métricas HTTP: ${error.message}`);
   }
@@ -97,7 +97,7 @@ export async function getWebhookMetrics(serviceId: string)
   try
   {
     const rows = await queryMetrics(serviceId, 'webhook_metrics');
-    const formattedRows = rows.map(row => (
+    const formattedRows = rows.map((row: any) => (
     {
       time: row._time,
       statusCode: row.statusCode || 0,

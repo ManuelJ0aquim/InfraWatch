@@ -1,34 +1,39 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
+model Service {
+  id             String      @id
+  name           String
+  type           ServiceType
+  target         String
+  checkEveryS    Int         @default(60)
+  status         Status      @default(UNKNOWN)
+  ownerId        String
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime
+  lastResponseMs Int?
+  sysDescr       String?
+  sysName        String?
+  User           User        @relation(fields: [ownerId], references: [id])
 }
 
 model User {
-  id               String    @id @default(cuid())
-  name             String
-  email            String    @unique
-  password         String
-  role             Role      @default(USER)
-  services         Service[]
-  passwordResetToken String?
+  id                   String    @id
+  name                 String
+  email                String    @unique
+  password             String
+  role                 Role      @default(USER)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime
   passwordResetExpires DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-}
-
-model Service {
-  id              String    @id @default(cuid())
-  name            String
-  type            ServiceType
-  target          String 
-  ownerId         String
-  owner           User      @relation(fields: [ownerId], references: [id])
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  passwordResetToken   String?
+  Service              Service[]
 }
 
 enum Role {
@@ -46,4 +51,5 @@ enum ServiceType {
 enum Status {
   UP
   DOWN
+  UNKNOWN
 }

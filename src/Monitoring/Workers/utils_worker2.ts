@@ -54,7 +54,7 @@ async function processServiceResult(service: Service, result: any)
         });
       }
   
-      await prisma.service.update(
+      await (prisma.service as any).update(
       {
         where: { id: service.id },
         data:
@@ -82,7 +82,7 @@ async function processServiceResult(service: Service, result: any)
         });
       }
   
-      await prisma.service.update(
+      await (prisma.service as any).update(
       {
         where: { id: service.id },
         data:
@@ -123,7 +123,7 @@ async function processServiceResult(service: Service, result: any)
         });
       }
   
-      await prisma.service.update(
+      await (prisma.service as any).update(
       {
         where: { id: service.id },
         data:
@@ -146,7 +146,7 @@ async function processServiceResult(service: Service, result: any)
         });
       }
   
-      await prisma.service.update(
+      await (prisma.service as any).update(
       {
         where: { id: service.id },
         data:
@@ -162,7 +162,7 @@ async function processServiceResult(service: Service, result: any)
 export async function detectIssues(): Promise<Array<{ serviceName: string; description: string }>>
 {
   const problems: Array<{ serviceName: string; description: string }> = [];
-  const services = await prisma.service.findMany();
+  const services = await (prisma.service as any).findMany();
 
   for (const service of services)
   {
@@ -174,7 +174,7 @@ export async function detectIssues(): Promise<Array<{ serviceName: string; descr
     }
     catch (error)
     {
-      await prisma.service.update(
+      await (prisma.service as any).update(
       {
         where: { id: service.id },
         data: { status: Status.DOWN },

@@ -50,7 +50,7 @@ export async function CheckSNMP(target: string, community = 'public', timeoutMs 
       const results: any[] = [];
       session.subtree(oid, (vb: any) => {
         if (!snmp.isVarbindError(vb)) results.push(vb);
-      }, (err) => {
+      }, (err:any) => {
         if (err) return reject(err);
         resolve(results);
       });
@@ -58,7 +58,7 @@ export async function CheckSNMP(target: string, community = 'public', timeoutMs 
   };
 
   try {
-    const baseData: SNMPData = { responseMs: 0 };
+    const baseData: any = { responseMs: 0 };
 
     // Dados principais
     const varbinds = await getOids(Object.values(OIDS));

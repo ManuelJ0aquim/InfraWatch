@@ -5,7 +5,7 @@ export async function Register(request: FastifyRequest, reply: FastifyReply)
 {
   const { name, email, password } = request.body as { name: string; email: string; password: string };
 
-  const existingUser = await request.server.prisma.user.findUnique({ where: { email } });
+  const existingUser = await (request.server as any).prisma.user.findUnique({ where: { email } });
   if (existingUser)
   {
     return reply.code(400).send({ message: 'Email already in use' });
@@ -13,7 +13,7 @@ export async function Register(request: FastifyRequest, reply: FastifyReply)
 
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  const user = await request.server.prisma.user.create(
+  const user = await (request.server as any).prisma.user.create(
   {
     data: { name, email, password: hashedPassword },
   });
