@@ -4,35 +4,41 @@ import { EmailProvider } from "../../Notifications/Email/EmailProvider";
 export async function solicitarResetSenha(req: FastifyRequest, reply: FastifyReply) {
   const { user } = req.body as { user: string };
 
-  if (!user) {
+  if (!user)
+  {
     return reply.status(400).send({ error: "Campo obrigatório não preenchido" });
   }
 
   const isEmail = (str: string) => /\S+@\S+\.\S+/.test(str);
 
-  const usuario = await req.server.prisma.user.findFirst({
+  const usuario = await req.server.prisma.user.findFirst(
+  {
     where: isEmail(user) ? { email: user } : { name: user },
   });
 
-  if (!usuario) {
+  if (!usuario)
+  {
     return reply.status(404).send({ error: "Usuário não encontrado." });
   }
 
   const token = Math.floor(1000 + Math.random() * 9000).toString();
 
-  await req.server.prisma.user.update({
+  await req.server.prisma.user.update(
+  {
     where: { id: usuario.id },
-    data: {
-    passwordResetToken   : token,
-    passwordResetExpires: new Date(Date.now() + 10 * 60 * 1000),
+    data:
+    {
+      passwordResetToken   : token,
+      passwordResetExpires: new Date(Date.now() + 10 * 60 * 1000),
     },
   });
 
-  if (usuario.email) {
+  if (usuario.email)
+  {
     const emailProvider = new EmailProvider();
-    await emailProvider.sendNotification(
+    await emailProvider.sendNotification2(
       usuario.email,
-      `Seu código para redefinição de senha é: ${token}. Ele expira em 10 minutos.`
+      `${token}`
     );
   }
 

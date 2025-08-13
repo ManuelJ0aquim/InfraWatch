@@ -1,7 +1,7 @@
-import Fastify, { fastify } from 'fastify';
+import Fastify from 'fastify';
 import fastifySwagger from 'fastify-swagger';
 import { RegisterAllRoutes } from "./AllRoutes/RegisterAllRoutes";
-import { startMonitoring } from './Monitor/worker';
+import { startMonitoring } from './Monitoring/Workers/worker';
 
 const server = Fastify({
     logger: false,
