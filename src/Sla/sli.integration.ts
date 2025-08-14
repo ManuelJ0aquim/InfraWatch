@@ -4,7 +4,7 @@ import { SliService } from '../Sla/sli.service';
 const prisma = new PrismaClient();
 const sliService = new SliService(prisma);
 
-interface MonitoringResult {
+export interface MonitoringResult {
     status: Status;
     responseMs?: number;
     totalMs?: number;
@@ -66,10 +66,8 @@ export class SLIIntegration {
         }
     }
 
-    /**
-     * Calcula SLI para serviços PING
-     * Baseado na disponibilidade e perda de pacotes
-     */
+    
+    //Calcula SLI para serviços PING baseado na disponibilidade e perda de pacotes
     private static calculatePingSLI(result: MonitoringResult): { achieved: number; target: number } {
         const target = 100;
         
@@ -83,10 +81,8 @@ export class SLIIntegration {
         }
     }
 
-    /**
-     * Calcula SLI para serviços SNMP
-     * Baseado na disponibilidade e completude dos dados
-     */
+
+    //Calcula SLI para serviços SNMP Baseado na disponibilidade e completude dos dados
     private static calculateSnmpSLI(result: MonitoringResult): { achieved: number; target: number } {
         const target = 100;
         
@@ -106,10 +102,7 @@ export class SLIIntegration {
         }
     }
 
-    /**
-     * Calcula SLI para serviços WEBHOOK
-     * Baseado na disponibilidade e código de resposta HTTP
-     */
+    //Calcula SLI para serviços WEBHOOK Baseado na disponibilidade e código de resposta HTTP
     private static calculateWebhookSLI(result: MonitoringResult): { achieved: number; target: number } {
         const target = 100;
         
@@ -128,9 +121,7 @@ export class SLIIntegration {
         }
     }
 
-    /**
-     * Processa múltiplos resultados de monitoramento em lote
-     */
+    //Processa múltiplos resultados de monitoramento em lote
     static async processBatchResults(results: Array<{ serviceId: string; serviceType: ServiceType; result: MonitoringResult }>) {
         const promises = results.map(({ serviceId, serviceType, result }) =>
             this.processMonitoringResult(serviceId, serviceType, result)
@@ -139,9 +130,7 @@ export class SLIIntegration {
         await Promise.allSettled(promises);
     }
 
-    /**
-     * Calcula estatísticas de SLI para um período
-     */
+    //Calcula estatísticas de SLI para um período
     static async getSLIStatistics(serviceId: string, hours: number = 24) {
         const endDate = new Date();
         const startDate = new Date(endDate.getTime() - (hours * 60 * 60 * 1000));
@@ -174,9 +163,7 @@ export class SLIIntegration {
     }
 }
 
-/**
- * Função utilitária para integrar com o sistema de monitoramento existente
- */
+//Função utilitária para integrar com o sistema de monitoramento existente
 export async function integrateWithMonitoring(serviceId: string, serviceType: ServiceType, monitoringResult: any) {
     const normalizedResult: MonitoringResult = {
         status: monitoringResult.status || Status.DOWN,
@@ -192,19 +179,15 @@ export async function integrateWithMonitoring(serviceId: string, serviceType: Se
     await SLIIntegration.processMonitoringResult(serviceId, serviceType, normalizedResult);
 }
 
-/**
- * Função para configurar integração automática
- */
+//Função para configurar integração automática
 export function enableAutoSLIGeneration() {
     console.log('🔗 Integração automática de SLI habilitada');
 }
 
-/**
- * Função para gerar SLIs em lote para todos os serviços
- */
+//Função para gerar SLIs em blocos para todos os serviços
 export async function generateBatchSLIs() {
     try {
-        console.log('🔄 Gerando SLIs em lote...');
+        console.log('🔄 Gerando SLIs em blocos...');
         
         const services = await prisma.service.findMany();
         console.log(`📊 Processando ${services.length} serviços...`);
@@ -234,3 +217,4 @@ export async function generateBatchSLIs() {
         throw error;
     }
 }
+

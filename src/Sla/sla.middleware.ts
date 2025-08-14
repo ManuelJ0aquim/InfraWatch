@@ -1,5 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { PrismaClient } from '@prisma/client';
+import { SLAStatistics } from './interface/sla.interface'
 
 const prisma = new PrismaClient();
 
@@ -131,14 +132,6 @@ export function validateSLIValues(achieved: number, target: number): { isValid: 
     }
 
     return { isValid: true };
-}
-
-export interface SLAStatistics {
-    totalSLAs: number;
-    metSLAs: number;
-    breachedSLAs: number;
-    pendingSLAs: number;
-    successRate: number;
 }
 
 export async function calculateSLAStatistics(serviceId: string): Promise<SLAStatistics> {

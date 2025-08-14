@@ -2,15 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { SliService } from './sli.service';
 import { SlaService } from './sla.service';
 import { updateAllSLAs, scheduleAutoUpdates } from './update-slas';
-
-interface SLAConfig {
-    autoUpdateEnabled: boolean;
-    autoUpdateIntervalMinutes: number;
-    createMissingSLAs: boolean;
-    updatePendingSLAs: boolean;
-    cleanupOldSLAsEnabled: boolean;
-    cleanupOlderThanDays: number;
-}
+import { SLAConfig } from './interface/sla.interface'
 
 export class SLAManager {
     private prisma: PrismaClient;
@@ -34,9 +26,8 @@ export class SLAManager {
         };
     }
 
-    /**
-     * Inicializa o gerenciador de SLAs
-     */
+    
+    //Inicializa o gerenciador de SLAs 
     async initialize() {
         console.log('🚀 Inicializando gerenciador de SLAs...');
         
@@ -54,9 +45,7 @@ export class SLAManager {
         }
     }
 
-    /**
-     * Executa atualização inicial
-     */
+    //Executa atualização inicial
     private async runInitialUpdate() {
         console.log('🔄 Executando atualização inicial de SLAs...');
         
@@ -66,9 +55,7 @@ export class SLAManager {
         });
     }
 
-    /**
-     * Inicia atualizações automáticas
-     */
+    //Inicia atualizações automáticas
     private startAutoUpdates() {
         console.log(`⏰ Iniciando atualizações automáticas a cada ${this.config.autoUpdateIntervalMinutes} minutos`);
         
@@ -85,9 +72,7 @@ export class SLAManager {
         }, this.config.autoUpdateIntervalMinutes * 60 * 1000);
     }
 
-    /**
-     * Para as atualizações automáticas
-     */
+    //Para as atualizações automáticas
     stopAutoUpdates() {
         if (this.updateInterval) {
             clearInterval(this.updateInterval);
@@ -96,9 +81,7 @@ export class SLAManager {
         }
     }
 
-    /**
-     * Atualiza a configuração do gerenciador
-     */
+    //Atualiza a configuração do gerenciador
     updateConfig(newConfig: Partial<SLAConfig>) {
         this.config = { ...this.config, ...newConfig };
         
@@ -109,9 +92,7 @@ export class SLAManager {
         }
     }
 
-    /**
-     * Força uma atualização manual
-     */
+    //Força uma atualização manual
     async forceUpdate(serviceId?: string) {
         console.log('🔄 Forçando atualização manual de SLAs...');
         
@@ -122,9 +103,7 @@ export class SLAManager {
         });
     }
 
-    /**
-     * Obtém estatísticas do gerenciador
-     */
+    //Obtém estatísticas do gerenciador
     async getManagerStatistics() {
         const totalServices = await this.prisma.service.count();
         const totalSLAs = await this.prisma.sla.count();
@@ -152,9 +131,7 @@ export class SLAManager {
         };
     }
 
-    /**
-     * Executa limpeza de dados antigos
-     */
+    //Executa limpeza de dados antigos
     async cleanupOldData() {
         if (!this.config.cleanupOldSLAsEnabled) {
             console.log('🧹 Limpeza de dados antigos está desabilitada');
@@ -187,9 +164,7 @@ export class SLAManager {
         };
     }
 
-    /**
-     * Finaliza o gerenciador
-     */
+    //Finaliza o gerenciador
     async shutdown() {
         console.log('⏹️  Finalizando gerenciador de SLAs...');
         
@@ -200,10 +175,6 @@ export class SLAManager {
 }
 
 let slaManagerInstance: SLAManager | null = null;
-
-/**
- * Obtém a instância singleton do gerenciador de SLAs
- */
 export function getSLAManager(prisma?: PrismaClient, config?: Partial<SLAConfig>): SLAManager {
     if (!slaManagerInstance) {
         if (!prisma) {
@@ -214,11 +185,10 @@ export function getSLAManager(prisma?: PrismaClient, config?: Partial<SLAConfig>
     return slaManagerInstance;
 }
 
-/**
- * Inicializa o gerenciador de SLAs globalmente
- */
+//Inicializa o gerenciador de SLAs globalmente
 export async function initializeSLAManager(prisma: PrismaClient, config?: Partial<SLAConfig>) {
     const manager = getSLAManager(prisma, config);
     await manager.initialize();
     return manager;
 }
+

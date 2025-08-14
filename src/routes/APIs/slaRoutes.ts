@@ -1,22 +1,8 @@
 import { FastifyInstance } from 'fastify';
-import {
-    createSLA,
-    updateSLAStatus,
-    getSLAs,
-    getSLAById,
-    createSLI,
-    getSLIs,
-    calculateSLA,
-    getSLAStatistics,
-    getDashboardData,
-    forceSLAUpdate,
-    getManagerStatus,
-    generateSLIsBatch
-} from '../../Controllers/APIs/sla';
-
+import { createSLA, updateSLAStatus, getSLAs, getSLAById, calculateSLA, getSLAStatistics, forceSLAUpdate, getManagerStatus } from '../../Controllers/APIs/sla.controller';
+import {createSLI, getSLIs,getDashboardData, generateSLIsBatch } from '../../Controllers/APIs/sli.controller';
 async function slaRoutes(fastify: FastifyInstance) {
-    
-    fastify.post('/sla', {
+
     fastify.post('/sla', {
         schema: {
             description: 'Criar um novo SLA para um serviço',
