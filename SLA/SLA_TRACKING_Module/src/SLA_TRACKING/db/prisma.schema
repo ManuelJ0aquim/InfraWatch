@@ -1,0 +1,97 @@
+// Prisma schema fragment for SLA Tracking. Merge with your main schema.prisma.
+generator client { provider = "prisma-client-js" }
+datasource db { provider = "postgresql" url = env("DATABASE_URL") }
+
+enum WindowStatus {
+  OK
+  AT_RISK
+  BREACHED
+}
+
+model SlaPolicy {
+  id          String   @id @default(uuid()) @db.Uuid
+  serviceId   String?  @db.Uuid
+  systemId    String?  @db.Uuid
+  targetPct   Decimal  @db.Decimal(5,3)
+  period      String
+  timezone    String
+  activeFrom  DateTime @db.Timestamptz(6)
+  activeTo    DateTime? @db.Timestamptz(6)
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("SlaPolicy")
+}
+
+model MaintenanceWindow {
+  id            String   @id @default(uuid()) @db.Uuid
+  serviceId     String?  @db.Uuid
+  systemId      String?  @db.Uuid
+  startsAt      DateTime @db.Timestamptz(6)
+  endsAt        DateTime @db.Timestamptz(6)
+  reason        String?
+  recurrenceRule String?
+
+  @@map("MaintenanceWindow")
+}
+
+model Incident {
+  id         String   @id @default(uuid()) @db.Uuid
+  serviceId  String   @db.Uuid
+  startedAt  DateTime @db.Timestamptz(6)
+  endedAt    DateTime? @db.Timestamptz(6)
+  isPlanned  Boolean  @default(false)
+  source     String?
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([serviceId, startedAt], name: "idx_incident_service_started")
+  @@map("Incident")
+}
+
+model SlaWindow {
+  id                     String        @id @default(uuid()) @db.Uuid
+  serviceId              String?       @db.Uuid
+  systemId               String?       @db.Uuid
+  periodStart            DateTime      @db.Timestamptz(6)
+  periodEnd              DateTime      @db.Timestamptz(6)
+  availabilityPct        Decimal       @db.Decimal(6,4)
+  errorBudgetAllowedMs   Int
+  errorBudgetUsedMs      Int
+  status                 WindowStatus  @db.Enum("window_status")
+  computedAt             DateTime      @default(now()) @db.Timestamptz(6)
+  needsRecompute         Boolean       @default(false)
+
+  @@unique([serviceId, periodStart, periodEnd], name: "idx_slawindow_service_period")
+  @@map("SlaWindow")
+}
+
+model Violation {
+  id           String   @id @default(uuid()) @db.Uuid
+  policyId     String   @db.Uuid
+  windowId     String   @db.Uuid
+  expectedPct  Decimal  @db.Decimal(5,3)
+  observedPct  Decimal  @db.Decimal(6,4)
+  reason       String?
+  createdAt    DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([policyId, createdAt], name: "idx_violation_policy")
+  @@map("Violation")
+}
+
+model System {
+  id               String  @id @default(uuid()) @db.Uuid
+  name             String
+  compositionRule  String
+  kRequired        Int?
+
+  @@map("System")
+}
+
+model SystemMember {
+  systemId    String @db.Uuid
+  serviceId   String @db.Uuid
+  isCritical  Boolean @default(true)
+
+  @@id([systemId, serviceId])
+  @@map("SystemMember")
+}
