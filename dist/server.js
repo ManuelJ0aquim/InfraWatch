@@ -34,8 +34,8 @@ const start = async () => {
         // Inicializa Socket.IO e guarda a instância
         (0, socket_1.initSocket)(httpServer);
         (0, worker_1.startMonitoring)();
-        await server.listen({ port: 3000 });
-        console.log('Servidor rodando em http://localhost:3000');
+        await server.listen({ port: 3002 });
+        console.log('Servidor rodando em http://localhost:3002');
     }
     catch (err) {
         server.log.error(err);
