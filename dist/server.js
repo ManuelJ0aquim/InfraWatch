@@ -7,11 +7,11 @@ const fastify_1 = __importDefault(require("fastify"));
 const fastify_swagger_1 = __importDefault(require("fastify-swagger"));
 const RegisterAllRoutes_1 = require("./AllRoutes/RegisterAllRoutes");
 const worker_1 = require("./Monitoring/Workers/worker");
-const http_1 = __importDefault(require("http"));
 const socket_1 = require("./socket");
 const server = (0, fastify_1.default)({
-    logger: false,
+    logger: true, // Ative o logger para ajudar no debug
 });
+// Configuração do Swagger
 server.register(fastify_swagger_1.default, {
     routePrefix: '/docs',
     swagger: {
@@ -20,7 +20,7 @@ server.register(fastify_swagger_1.default, {
             description: 'API do sistema InfraWatch',
             version: '0.1.0',
         },
-        host: 'localhost:3000',
+        host: 'localhost:3002',
         schemes: ['http'],
         consumes: ['application/json'],
         produces: ['application/json'],
@@ -29,13 +29,16 @@ server.register(fastify_swagger_1.default, {
 });
 const start = async () => {
     try {
-        await (0, RegisterAllRoutes_1.RegisterAllRoutes)(server);
-        const httpServer = http_1.default.createServer(server.server);
-        // Inicializa Socket.IO e guarda a instância
-        (0, socket_1.initSocket)(httpServer);
+        // Registra todas as rotas
+        (0, RegisterAllRoutes_1.RegisterAllRoutes)(server); // Remova o await se não for necessário
+        // Inicia o monitoramento
         (0, worker_1.startMonitoring)();
-        await server.listen({ port: 3002 });
-        console.log('Servidor rodando em http://localhost:3002');
+        // Inicia o servidor Fastify
+        await server.listen(3002, '0.0.0.0');
+        console.log('Servidor Fastify rodando em http://localhost:3002');
+        // Inicializa Socket.IO usando o servidor interno do Fastify
+        (0, socket_1.initSocket)(server.server);
+        console.log(`Documentação disponível em http://localhost:3002/docs`);
     }
     catch (err) {
         server.log.error(err);

@@ -4,6 +4,9 @@ COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
 
+# Gera Prisma Client já no ambiente Linux (builder)
+RUN npx prisma generate
+
 FROM node:22.16.0-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
