@@ -1,0 +1,84 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model SlaPolicy {
+  id         String    @id @default(uuid())
+  serviceId  String?
+  systemId   String?
+  targetPct  Float
+  period     String    // "MONTH"
+  timezone   String
+  activeFrom DateTime  @default(now())
+  activeTo   DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@map("sla_policies")
+}
+
+model SlaWindow {
+  id            String    @id @default(uuid())
+  policyId      String
+  serviceId     String?
+  systemId      String?
+  periodKey     String    // "2025-08"
+  periodStart   DateTime
+  periodEnd     DateTime
+  uptimePct     Float?
+  budgetMin     Float?
+  usedMin       Float?
+  status        String?   // "OK", "AT_RISK", "BREACHED"
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([policyId, periodKey])
+  @@map("sla_windows")
+}
+
+model Incident {
+  id         String    @id @default(uuid())
+  serviceId  String?
+  systemId   String?
+  startedAt  DateTime
+  endedAt    DateTime?
+  isPlanned  Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@map("incidents")
+}
+
+model MaintenanceWindow {
+  id        String    @id @default(uuid())
+  serviceId String?
+  systemId  String?
+  startsAt  DateTime
+  endsAt    DateTime
+  reason    String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("maintenance_windows")
+}
+
+model SlaViolation {
+  id        String   @id @default(uuid())
+  policyId  String
+  windowId  String
+  violatedAt DateTime
+  uptimePct Float
+  targetPct Float
+  severity  String   // "AT_RISK", "BREACHED"
+  createdAt DateTime @default(now())
+
+  @@map("sla_violations")
+}
