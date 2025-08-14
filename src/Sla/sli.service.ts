@@ -1,6 +1,5 @@
 import { PrismaClient } from '@prisma/client';
 
-
 export class SliService {
     constructor(private prisma: PrismaClient) {
         this.prisma = prisma;
