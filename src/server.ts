@@ -5,7 +5,7 @@ import { startMonitoring } from './Monitoring/Workers/worker';
 import { initSocket } from './socket';
 
 const server = Fastify({
-  logger: true,  // Ative o logger para ajudar no debug
+  logger: false,
 });
 
 // Configuração do Swagger
@@ -26,22 +26,21 @@ server.register(fastifySwagger, {
 });
 
 const start = async () => {
-  try {
-    // Registra todas as rotas
-    RegisterAllRoutes(server);  // Remova o await se não for necessário
+  try
+  {
+    RegisterAllRoutes(server);
     
-    // Inicia o monitoramento
     startMonitoring();
     
-    // Inicia o servidor Fastify
     await server.listen(3002, '0.0.0.0');
     console.log('Servidor Fastify rodando em http://localhost:3002');
     
-    // Inicializa Socket.IO usando o servidor interno do Fastify
     initSocket(server.server);
     
     console.log(`Documentação disponível em http://localhost:3002/docs`);
-  } catch (err) {
+  }
+  catch (err)
+  {
     server.log.error(err);
     process.exit(1);
   }

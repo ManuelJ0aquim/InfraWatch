@@ -8,6 +8,7 @@ import { VerifyOTProutes } from "../routes/Auth/VerifyOTPRoutes.js";
 import { notificationRoutes } from '../routes/APIs/notificationRoutes';
 import { serviceMetricsRoutes } from '../routes/APIs/serviceMetricsRoutes';
 import { resetarSenhaRoutes } from "../routes/Auth/ResetPasswordRoutes.js";
+import { addServiceRoutes } from "../routes/APIs/addServiceRoutes";
 import { solicitarResetSenhaRoutes } from "../routes/Auth/SolicitarResetPasswordRoutes.js";
 
 export async function RegisterAllRoutes(app: FastifyInstance)
@@ -17,6 +18,7 @@ export async function RegisterAllRoutes(app: FastifyInstance)
     app.register(servicesRoutes);
     app.register(notificationRoutes);
     app.register(serviceMetricsRoutes);
+    app.register(addServiceRoutes);
     app.register(LoginRoutes, { prefix: "/auth" });
     app.register(RegisterRoutes, { prefix: "/auth" });
     app.register(VerifyOTProutes, { prefix: "/auth" });
