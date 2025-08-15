@@ -53,17 +53,6 @@ async function processServiceResult(service: Service, result: any)
           description: 'SNMP não retornou nome do sistema',
         });
       }
-  
-      await (prisma.service as any).update(
-      {
-        where: { id: service.id },
-        data:
-        {
-          status: Status.UP,
-          sysName: result.sysName || null,
-          sysDescr: result.sysDescr || null,
-        },
-      });
     }
     else if (service.type === ServiceType.PING)
     {
@@ -81,16 +70,6 @@ async function processServiceResult(service: Service, result: any)
             Pacotes Recebidos: ${result.received}, Quantidade de dados(bytes) ${result.data.length}`,
         });
       }
-  
-      await (prisma.service as any).update(
-      {
-        where: { id: service.id },
-        data:
-        {
-          status: result.status,
-          lastResponseMs: result.avgMs,
-        },
-      });
     }
     else if (service.type === ServiceType.HTTP)
     {
@@ -122,16 +101,6 @@ async function processServiceResult(service: Service, result: any)
           description: `Status: ${result.status}, HTTP: ${result.httpStatus}, tempo total: ${result.totalMs}ms`,
         });
       }
-  
-      await (prisma.service as any).update(
-      {
-        where: { id: service.id },
-        data:
-        {
-          status: result.status,
-          lastResponseMs: result.totalMs,
-        },
-      });
     }
     else
     {
@@ -145,16 +114,6 @@ async function processServiceResult(service: Service, result: any)
           description: `Status: ${result.status}, tempo resposta: ${result.responseMs}ms`,
         });
       }
-  
-      await (prisma.service as any).update(
-      {
-        where: { id: service.id },
-        data:
-        {
-          status: result.status,
-          lastResponseMs: result.responseMs,
-        },
-      });
     }
     return problems;
   }  
@@ -174,12 +133,6 @@ export async function detectIssues(): Promise<Array<{ serviceName: string; descr
     }
     catch (error)
     {
-      await (prisma.service as any).update(
-      {
-        where: { id: service.id },
-        data: { status: Status.DOWN },
-      });
-
       problems.push(
       {
         serviceName: service.name,

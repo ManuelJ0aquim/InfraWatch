@@ -16,8 +16,6 @@ export async function servicesRoutes(fastify: FastifyInstance) {
               name: { type: 'string' },
               type: { type: 'string' },
               target: { type: 'string' },
-              status: { type: 'string' },
-              checkEveryS: { type: 'integer' },
             }
           }
         }

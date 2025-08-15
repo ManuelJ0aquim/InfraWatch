@@ -11,8 +11,6 @@ export async function getAllServices()
       name: true,
       type: true,
       target: true,
-      status: true,
-      checkEveryS: true,
     }
   });
 }
