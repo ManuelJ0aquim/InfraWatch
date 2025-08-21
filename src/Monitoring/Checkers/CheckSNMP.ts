@@ -24,18 +24,20 @@ export async function CheckSNMP(target: string, community = 'public', timeoutMs 
   const session = snmp.createSession(target, community, { timeout: timeoutMs });
 
   const OIDS = {
-    uptime: '1.3.6.1.2.1.1.3.0',
+    // uptime: '1.3.6.1.2.1.1.3.0',
     sysName: '1.3.6.1.2.1.1.5.0',
     sysDescr: '1.3.6.1.2.1.1.1.0',
-    cpuLoad1min: '1.3.6.1.4.1.2021.10.1.3.1',
-    memTotalKB: '1.3.6.1.4.1.2021.4.5.0',
-    memAvailKB: '1.3.6.1.4.1.2021.4.6.0'
+    sysUpTime: '1.3.6.1.2.1.1.3.0'
+    // cpuLoad1min: '1.3.6.1.4.1.2021.10.1.3.1',
+    // memTotalKB: '1.3.6.1.4.1.2021.4.5.0',
+    // memAvailKB: '1.3.6.1.4.1.2021.4.6.0'
+
   };
 
   const start = Date.now();
 
-  // Helper para GET
-  const getOids = (oids: string[]) => {
+  const getOids = (oids: string[]) =>
+  {
     return new Promise<any[]>((resolve, reject) => {
       session.get(oids, (err: any, varbinds: any) => {
         if (err) return reject(err);
@@ -44,7 +46,6 @@ export async function CheckSNMP(target: string, community = 'public', timeoutMs 
     });
   };
 
-  // Helper para SUBTREE
   const walk = (oid: string) => {
     return new Promise<any[]>((resolve, reject) => {
       const results: any[] = [];
@@ -57,23 +58,24 @@ export async function CheckSNMP(target: string, community = 'public', timeoutMs 
     });
   };
 
-  try {
+  try
+  {
     const baseData: any = { responseMs: 0 };
 
-    // Dados principais
     const varbinds = await getOids(Object.values(OIDS));
-    varbinds.forEach(vb => {
+    varbinds.forEach(vb =>
+    {
       const key = Object.keys(OIDS).find(k => OIDS[k as keyof typeof OIDS] === vb.oid) as keyof SNMPData;
       if (key && vb.value !== null) baseData[key] = vb.value;
     });
 
-    // Conversões
-    if (baseData.cpuLoad1min) baseData.cpuLoad1min = parseFloat(String(baseData.cpuLoad1min));
-    if (baseData.memTotalKB && baseData.memAvailKB) {
+    if (baseData.cpuLoad1min)
+      baseData.cpuLoad1min = parseFloat(String(baseData.cpuLoad1min));
+    if (baseData.memTotalKB && baseData.memAvailKB)
+    {
       baseData.memUsagePercent = Number(((1 - (baseData.memAvailKB / baseData.memTotalKB)) * 100).toFixed(2));
     }
 
-    // Interfaces
     const [ifDescr, ifStatus, ifInOctets, ifOutOctets] = await Promise.all([
       walk('1.3.6.1.2.1.2.2.1.2'),  // Nome
       walk('1.3.6.1.2.1.2.2.1.8'),  // Status
@@ -101,7 +103,9 @@ export async function CheckSNMP(target: string, community = 'public', timeoutMs 
     baseData.responseMs = Date.now() - start;
 
     return baseData;
-  } finally {
+  }
+  finally
+  {
     session.close();
   }
 }

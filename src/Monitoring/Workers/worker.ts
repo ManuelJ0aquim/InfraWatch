@@ -1,9 +1,8 @@
-import { checkServices } from './utills_worker'
+import { startQueueScheduler } from '../Queue/scheduler';
+import '../Queue/monitoringWorker';
 
 export async function startMonitoring()
 {
-  console.log('🔍 Monitoramento iniciado...');
-  await checkServices();
-  setInterval(async () => { await checkServices(); }, 1000);
+  console.log('InfraWatch Em Acção...');
+  await startQueueScheduler();
 }
-

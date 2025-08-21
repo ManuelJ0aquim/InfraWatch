@@ -1,15 +1,16 @@
 import Fastify from 'fastify';
-import fastifySwagger from 'fastify-swagger';
-import { RegisterAllRoutes } from "./AllRoutes/RegisterAllRoutes";
-import { startMonitoring } from './Monitoring/Workers/worker';
 import { initSocket } from './socket';
+import fastifySwagger from 'fastify-swagger';
+import { startMonitoring } from './Monitoring/Workers/worker';
+import { RegisterAllRoutes } from "./RegisterRoutes/RegisterRoutes";
 
-const server = Fastify({
+const server = Fastify(
+{
   logger: false,
 });
 
-// Configuração do Swagger
-server.register(fastifySwagger, {
+server.register(fastifySwagger,
+{
   routePrefix: '/docs',
   swagger: {
     info: {
@@ -25,18 +26,17 @@ server.register(fastifySwagger, {
   exposeRoute: true,
 });
 
-const start = async () => {
+const start = async () =>
+{
   try
   {
     RegisterAllRoutes(server);
-    
-    startMonitoring();
-    
+
+    initSocket(server.server);
+    await startMonitoring();
+
     await server.listen(3002, '0.0.0.0');
     console.log('Servidor Fastify rodando em http://localhost:3002');
-    
-    initSocket(server.server);
-    
     console.log(`Documentação disponível em http://localhost:3002/docs`);
   }
   catch (err)

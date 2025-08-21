@@ -15,28 +15,25 @@ interface WebhookCheckResult {
   totalMs: number;
   headers?: Record<string, any>;
   reason?: string;
+  payloadSent?: any;
+  responseBody?: string;
 }
 
-export async function CheckWebhook(
-  url: string,
-  payload: any = { ping: true }, // Payload padrão
-  timeout: number = 5000
-): Promise<WebhookCheckResult> {
-  
+export async function CheckWebhook( url: string, payload: any = { ping: true }, timeout: number = 5000 ): Promise<WebhookCheckResult>
+{
   const timings: Record<string, number> = {};
   const startTotal = performance.now();
 
-  try {
-    // 🔹 1. Resolver DNS
+  try
+  {
     const startDNS = performance.now();
     const { address } = await lookup(new URL(url).hostname);
     timings.dnsMs = performance.now() - startDNS;
 
-    // 🔹 2. Enviar POST e medir tempo
     const startHTTP = performance.now();
     const res = await axios.post(url, payload, {
       timeout,
-      responseType: 'arraybuffer' // Permite medir tamanho real da resposta
+      responseType: 'arraybuffer'
     });
     timings.httpMs = performance.now() - startHTTP;
 
@@ -50,15 +47,20 @@ export async function CheckWebhook(
       dnsMs: timings.dnsMs,
       connectAndDownloadMs: timings.httpMs,
       totalMs: totalTime,
-      headers: res.headers
+      headers: res.headers,
+      payloadSent: payload,
+      responseBody: res.data.toString()
     };
 
-  } catch (err: any) {
+  }
+  catch (err: any)
+  {
     const totalTime = performance.now() - startTotal;
     return {
       status: 'DOWN',
       reason: err.code || err.message,
-      totalMs: totalTime
+      totalMs: totalTime,
+      payloadSent: payload
     };
   }
 }

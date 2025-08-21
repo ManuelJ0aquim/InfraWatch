@@ -1,7 +1,8 @@
 import { FastifyInstance } from 'fastify';
 import { getAllServices } from '../../Controllers/APIs/services';
 
-export async function servicesRoutes(fastify: FastifyInstance) {
+export async function servicesRoutes(fastify: FastifyInstance)
+{
   fastify.get('/api/services', {
     schema: {
       description: 'Lista todos os serviços',

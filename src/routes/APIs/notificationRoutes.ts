@@ -1,9 +1,10 @@
 import { FastifyInstance } from 'fastify';
-import { NotificationController } from '../../Controllers/APIs/Notification';
+import { NotificationController } from '../../Notifications/Notification';
 
 const controller = new NotificationController();
 
-export async function notificationRoutes(fastify: FastifyInstance) {
+export async function notificationRoutes(fastify: FastifyInstance)
+{
   fastify.post('/api/notifications/send', {
     schema: {
       description: 'Enviar notificação por canal',

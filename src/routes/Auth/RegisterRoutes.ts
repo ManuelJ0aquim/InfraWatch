@@ -1,7 +1,8 @@
 import { FastifyInstance } from 'fastify';
 import { Register } from '../../Controllers/Auth/Register';
 
-export async function RegisterRoutes(fastify: FastifyInstance) {
+export async function RegisterRoutes(fastify: FastifyInstance)
+{
   fastify.post('/register', {
     schema: {
       description: 'Registrar novo usuário',

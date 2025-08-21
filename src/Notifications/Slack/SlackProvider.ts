@@ -5,7 +5,8 @@ export class SlackProvider implements INotificationProvider
 {
   private webhookUrl: string;
 
-  constructor() {
+  constructor()
+  {
     this.webhookUrl = process.env.SLACK_WEBHOOK_URL || '';
   }
 

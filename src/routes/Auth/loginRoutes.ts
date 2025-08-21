@@ -1,7 +1,8 @@
 import { FastifyInstance } from 'fastify';
 import { Login } from '../../Controllers/Auth/login';
 
-export async function LoginRoutes(fastify: FastifyInstance) {
+export async function LoginRoutes(fastify: FastifyInstance)
+{
   fastify.post('/login', {
     schema: {
       description: 'Login do usuário',

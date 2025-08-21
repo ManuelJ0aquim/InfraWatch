@@ -1,7 +1,8 @@
 import { FastifyInstance } from "fastify";
 import { resetarSenha } from "../../Controllers/Auth/ResetPassword";
 
-export async function resetarSenhaRoutes(app: FastifyInstance) {
+export async function resetarSenhaRoutes(app: FastifyInstance)
+{
   app.post("/resetarSenha", {
     schema: {
       description: "Resetar senha do usuário com token de redefinição",

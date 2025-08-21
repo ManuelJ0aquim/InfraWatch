@@ -11,7 +11,6 @@ export async function resetarSenha(req: FastifyRequest, reply: FastifyReply)
     confirmnovaSenha: string;
   };
 
-  const isEmail = (str: string) => /\S+@\S+\.\S+/.test(str);
   const usuario = await req.server.prisma.user.findFirst(
   {
     where: { email: user }

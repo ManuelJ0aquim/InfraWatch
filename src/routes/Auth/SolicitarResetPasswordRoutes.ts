@@ -1,7 +1,8 @@
 import { FastifyInstance } from "fastify";
 import { solicitarResetSenha } from "../../Controllers/Auth/SolicitarResetPassword";
 
-export async function solicitarResetSenhaRoutes(app: FastifyInstance) {
+export async function solicitarResetSenhaRoutes(app: FastifyInstance)
+{
   app.post("/solicitarResetSenha", {
     schema: {
       description: "Solicitar token para redefinição de senha",

@@ -1,7 +1,8 @@
 import { FastifyInstance } from "fastify";
 import { VerifyOTP } from "../../Controllers/Auth/VerifyOTP";
 
-export async function VerifyOTProutes(app: FastifyInstance) {
+export async function VerifyOTProutes(app: FastifyInstance)
+{
   app.post("/VerifyOTP", {
     schema: {
       description: "Verifica se o token OTP para resetar senha é válido",

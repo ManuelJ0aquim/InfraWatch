@@ -12,12 +12,10 @@ export async function CheckHTTP(target: string)
 
   try
   {
-    // 🔹 Tempo DNS
     const startDNS = performance.now();
     const { address } = await lookup(new URL(target).hostname);
     timings.dnsMs = performance.now() - startDNS;
 
-    // 🔹 Tempo de conexão + download
     const startHTTP = performance.now();
     const res = await axios.get(target, { timeout: 5000, responseType: 'arraybuffer' });
     timings.httpMs = performance.now() - startHTTP;
@@ -25,14 +23,14 @@ export async function CheckHTTP(target: string)
     const totalTime = performance.now() - startTotal;
 
     return {
-      status: 'UP',
+      status: res.status >= 200 && res.status < 300 ? 'UP' : 'DOWN',
       httpStatus: res.status,
       ip: address,
       sizeBytes: res.data.length,
       dnsMs: timings.dnsMs,
       connectAndDownloadMs: timings.httpMs,
       totalMs: totalTime,
-      headers: res.headers
+      headers: res.headers,
     };
 
   }

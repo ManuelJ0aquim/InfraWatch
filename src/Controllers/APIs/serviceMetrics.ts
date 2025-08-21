@@ -1,4 +1,4 @@
-import { queryApi } from '../../influxdb';
+import { queryApi } from '../../Influxdb/influxdb';
 
 export async function queryMetrics(serviceId: string, measurement: string)
 {
@@ -21,25 +21,35 @@ export async function queryMetrics(serviceId: string, measurement: string)
   }
 }
 
-export async function getPingMetrics(serviceId: string)
-{
-  try
-  {
+export async function getPingMetrics(serviceId: string) {
+  try {
     const rows = await queryMetrics(serviceId, 'ping_metrics');
-    const formattedRows = rows.map((row: any) => ({
-      time: row._time,
-      lossPercent: row.lossPercent || 0,
-      minMs: row.minMs || 0,
-      avgMs: row.avgMs || 0,
-      maxMs: row.maxMs || 0,
-      mdevMs: row.mdevMs || 0,
-      status: row.status || 'unknown',
-      transmitted: row.transmitted || 0,
-      received: row.received || 0,
-    }));
+
+    const formattedRows = rows.map((row: any) => {
+      const transmitted = row.packets_transmitted || 0;
+      const received = row.packets_received;
+      const loss = row.percent_packet_loss || 0;
+      const min = row.minimum_response_ms || 0;
+      const max = row.maximum_response_msMs || 0;
+      const avg = row.average_response_ms || 0;
+      const mdev = row.standard_deviation_ms || 0;
+      const status = row.status || (received > 0 ? 'UP' : 'DOWN');
+      return {
+        time: row._time,
+        serviceId: serviceId,
+        packets_transmitted: transmitted,
+        packets_received: received,        
+        percent_packet_loss: loss,
+        minimum_response_ms: min,           
+        average_response_ms: avg,           
+        standard_deviation_ms: mdev,        
+        ttl: null,                         
+        status                     
+      };
+    });
+
     return formattedRows;
-  }
-  catch (error) {
+  } catch (error) {
     throw error;
   }
 }
@@ -72,7 +82,7 @@ export async function getHttpMetrics(serviceId: string)
   try
   {
     const rows = await queryMetrics(serviceId, 'http_metrics');
-    
+
     const formattedRows = rows.map((row: any) => ({
       time: row._time,
       status: row.status || 'unknown',
@@ -82,8 +92,11 @@ export async function getHttpMetrics(serviceId: string)
       dnsMs: row.dnsMs || 0,
       connectAndDownloadMs: row.connectAndDownloadMs || 0,
       totalMs: row.totalMs || 0,
-      headers: row.headers ? (typeof row.headers === 'string' ? JSON.parse(row.headers) : row.headers) : {},
+      headers: row.headers
+        ? (typeof row.headers === 'string' ? JSON.parse(row.headers) : row.headers)
+        : {},
     }));
+
     return formattedRows;
   }
   catch (error: any)
@@ -92,22 +105,24 @@ export async function getHttpMetrics(serviceId: string)
   }
 }
 
-export async function getWebhookMetrics(serviceId: string)
-{
-  try
-  {
+export async function getWebhookMetrics(serviceId: string) {
+  try {
     const rows = await queryMetrics(serviceId, 'webhook_metrics');
-    const formattedRows = rows.map((row: any) => (
-    {
+    const formattedRows = rows.map((row: any) => ({
       time: row._time,
-      statusCode: row.statusCode || 0,
-      responseTimeMs: row.responseTimeMs || 0,
       status: row.status || 'unknown',
+      httpStatus: row.httpStatus || 0,
+      ip: row.ip || null,
+      sizeBytes: row.sizeBytes || 0,
+      dnsMs: row.dnsMs || 0,
+      connectAndDownloadMs: row.connectAndDownloadMs || 0,
+      totalMs: row.totalMs || 0,
+      headers: row.headers || {},
+      payloadSent: row.payloadSent || null,
+      responseBody: row.responseBody || null,
     }));
     return formattedRows;
-  }
-  catch (error)
-  {
+  } catch (error) {
     throw error;
   }
 }

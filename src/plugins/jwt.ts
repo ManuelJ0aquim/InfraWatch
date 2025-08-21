@@ -19,7 +19,8 @@ export default fp(async (fastify) =>
   });
 });
 
-declare module 'fastify' {
+declare module 'fastify'
+{
   interface FastifyInstance {
     authenticate: any;
   } 
