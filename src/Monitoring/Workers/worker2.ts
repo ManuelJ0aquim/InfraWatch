@@ -72,7 +72,7 @@ async function processServiceResult(service: Service, result: any)
 
     case ServiceType.PING:
     {
-      io.emit("pingService", result);
+      io.emit("pingService", {...result, service});
       writePingMetrics(service.id, result);
       const isDown = result.status !== 'UP';
       if (isDown) {
@@ -91,7 +91,7 @@ async function processServiceResult(service: Service, result: any)
 
     case ServiceType.HTTP:
     {
-      io.emit("httpService", result);
+      io.emit("httpService", {...result, service});
       writeHttpMetrics(service.id, result);
       const isDown = result.status !== 'UP';
       if (isDown) {
