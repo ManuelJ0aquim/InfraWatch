@@ -3,6 +3,8 @@ import { initSocket } from './socket';
 import fastifySwagger from 'fastify-swagger';
 import { startMonitoring } from './Monitoring/Workers/worker';
 import { RegisterAllRoutes } from "./RegisterRoutes/RegisterRoutes";
+import cron from 'node-cron';
+import { syncGlpiInventory } from './Integrations/GLPI/glpiClient'
 
 const server = Fastify(
 {
@@ -31,8 +33,18 @@ const start = async () =>
   try
   {
     RegisterAllRoutes(server);
+    server.get('/sync-glpi', async (request, reply) => {
+      await syncGlpiInventory();
+      return { message: 'Sincronização com GLPI concluída.' };
+    });
+    // Sincroniza a cada hora
+    cron.schedule('0 * * * *', async () => {
+      console.log('Sincronizando inventário com GLPI...');
+      await syncGlpiInventory();
+    });
 
     initSocket(server.server);
+    
     await startMonitoring();
 
     await server.listen(3002, '0.0.0.0');

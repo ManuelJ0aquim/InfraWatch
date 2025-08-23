@@ -8,6 +8,7 @@ import { writeSnmpMetrics } from '../../Influxdb/WriteMetrics/WriteSnmpMetrics';
 import { writePingMetrics } from '../../Influxdb/WriteMetrics/WritePingMetrics';
 import { writeHttpMetrics } from '../../Influxdb/WriteMetrics/WriteHttpMetrics';
 import { writeWebhookMetrics } from '../../Influxdb/WriteMetrics/WriteWebhookMetrics';
+import { createGlpiTicket } from '../../Integrations/GLPI/glpiClient';
 
 const prisma = new PrismaClient();
 
@@ -31,6 +32,8 @@ async function getServiceResult(service: Service)
 async function processServiceResult(service: Service, result: any)
 {
   const problems: Array<any> = [];
+  //console.log(`Processando serviço: ${service.name}, Tipo: ${service.type}, Status: ${result?.status}, Resultado:`, JSON.stringify(result, null, 2));
+
 
   if (!result)
   {
@@ -43,9 +46,10 @@ async function processServiceResult(service: Service, result: any)
       status: 'DOWN',
       description: 'Sem resposta ou resultado inválido',
     });
+    await createGlpiTicket(service.name, 'Sem resposta ou resultado inválido', service.criticality);
     return problems;
   }
-
+  console.log("Entrou primeiro")
   const io = getIO();
 
   switch (service.type)
@@ -66,7 +70,16 @@ async function processServiceResult(service: Service, result: any)
           status: 'DOWN',
           description: 'SNMP não retornou nome do sistema',
         });
+        await createGlpiTicket(service.name, 'SNMP não retornou nome do sistema', service.criticality);
       }
+      await prisma.service.update({
+        where: { id: service.id },
+        data: {
+          status: Status.UP,
+          sysName: result.sysName || null,
+          sysDescr: result.sysDescr || null,
+        },
+      });
       break;
     }
 
@@ -76,6 +89,7 @@ async function processServiceResult(service: Service, result: any)
       writePingMetrics(service.id, result);
       const isDown = result.status !== 'UP';
       if (isDown) {
+        console.log(`Status DOWN para ${service.name}. Criando ticket.`);
         problems.push({
           serviceId: service.id,
           serviceName: service.name,
@@ -85,7 +99,17 @@ async function processServiceResult(service: Service, result: any)
           description: `Status: ${result.status}, perda de pacotes: ${result.lossPercent}%, min/avg/max/mdev: ${result.minMs}/${result.avgMs}/${result.maxMs}/${result.mdevMs}`,
           lossPercent: result.lossPercent,
         });
+        await createGlpiTicket(service.name, `Status: ${result.status}, ...`, service.criticality);
+      }else {
+        console.log(`Status UP para ${service.name}. Nenhum ticket criado.`);
       }
+      await prisma.service.update({
+        where: { id: service.id },
+        data: {
+          status: isDown ? Status.DOWN : Status.UP,
+          lastResponseMs: result.avgMs ?? null,
+        },
+      });
       break;
     }
 
@@ -103,7 +127,17 @@ async function processServiceResult(service: Service, result: any)
           status: 'DOWN',
           description: `Status: ${result.status}, HTTP: ${result.httpStatus}, tempo total: ${result.totalMs}ms`,
         });
+        await createGlpiTicket(service.name, `Status: ${result.status}, ...`, service.criticality);
+      }else {
+        console.log(`Status UP para ${service.name}. Nenhum ticket criado.`);
       }
+      await prisma.service.update({
+        where: { id: service.id },
+        data: {
+          status: isDown ? Status.DOWN : Status.UP,
+          lastResponseMs: result.avgMs ?? null,
+        },
+      });
       break;
     }
 
@@ -121,7 +155,16 @@ async function processServiceResult(service: Service, result: any)
           status: 'DOWN',
           description: `Status: ${result.status}, HTTP: ${result.httpStatus}, tempo total: ${result.totalMs}ms`,
         });
+        await createGlpiTicket(service.name, `Status: ${result.status}, ...`, service.criticality);
       }
+      await prisma.service.update({
+        where: { id: service.id },
+        data: {
+          status: Status.UP,
+          sysName: result.sysName || null,
+          sysDescr: result.sysDescr || null,
+        },
+      });
       break;
     }
     default:
