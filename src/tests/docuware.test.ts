@@ -6,7 +6,11 @@ test('getDocument retorna documento', async () => {
 });
 
 test('createDocument cria documento', async () => {
-  const doc = await createDocument({ name: 'Teste' });
+  const fileBuffer = Buffer.from('Teste'); // exemplo de buffer
+  const fileName = 'Teste.txt';
+  const fileCabinetId = 'SEU_ID_DO_ARQUIVO'; // ajuste conforme necessário
+  const token = 'SEU_TOKEN'; // ajuste conforme necessário
+  const doc = await createDocument(fileBuffer, fileName, fileCabinetId, token);
   expect(doc).toHaveProperty('id');
 });
 
