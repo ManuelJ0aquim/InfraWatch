@@ -1,13 +1,21 @@
-import { getIO } from '../../socket';
-import { CheckSNMP } from '../Checkers/CheckSNMP';
-import { CheckHTTP } from '../Checkers/CheckHTTP';
-import { CheckPING } from '../Checkers/CheckPING';
-import { CheckWebhook } from '../Checkers/CheckWEBHOOK';
-import { PrismaClient, Service, ServiceType } from '@prisma/client';
-import { writeSnmpMetrics } from '../../Influxdb/WriteMetrics/WriteSnmpMetrics';
-import { writePingMetrics } from '../../Influxdb/WriteMetrics/WritePingMetrics';
-import { writeHttpMetrics } from '../../Influxdb/WriteMetrics/WriteHttpMetrics';
-import { writeWebhookMetrics } from '../../Influxdb/WriteMetrics/WriteWebhookMetrics';
+import { getIO } from "../../socket";
+import { CheckSNMP } from "../Checkers/CheckSNMP";
+import { CheckHTTP } from "../Checkers/CheckHTTP";
+import { CheckPING } from "../Checkers/CheckPING";
+import { CheckWebhook } from "../Checkers/CheckWEBHOOK";
+
+import { analyzePingIssue } from "../../Analyzers/PingIssueAnalyzer";
+import { analyzeHttpIssue } from "../../Analyzers/HttpIssueAnalyzer";
+import { analyzeWebhookIssue } from "../../Analyzers/analyzeWebhookIssue";
+import { analyzeSnmpIssue } from "../../Analyzers/analyzeSnmpIssue";
+
+import { Problem } from "../../types/Problem";
+import { PrismaClient, Service, ServiceType } from "@prisma/client";
+
+import { writeSnmpMetrics } from "../../Influxdb/WriteMetrics/WriteSnmpMetrics";
+import { writePingMetrics } from "../../Influxdb/WriteMetrics/WritePingMetrics";
+import { writeHttpMetrics } from "../../Influxdb/WriteMetrics/WriteHttpMetrics";
+import { writeWebhookMetrics } from "../../Influxdb/WriteMetrics/WriteWebhookMetrics";
 
 const prisma = new PrismaClient();
 
@@ -28,9 +36,10 @@ async function getServiceResult(service: Service)
   }
 }
 
-async function processServiceResult(service: Service, result: any)
+async function processServiceResult(service: Service, result: any): Promise<Problem[]>
 {
-  const problems: Array<any> = [];
+  const io = getIO();
+  const problems: Problem[] = [];
 
   if (!result)
   {
@@ -38,104 +47,76 @@ async function processServiceResult(service: Service, result: any)
     {
       serviceId: service.id,
       serviceName: service.name,
-      metric: 'unknown',
+      metric: "unknown",
       value: 0,
-      status: 'DOWN',
-      description: 'Sem resposta ou resultado inválido',
+      status: "UNKNOWN",
+      description: "Sem resposta ou resultado inválido.",
+      recommendation:
+        "Verifique conectividade do host e configuração do serviço.",
+      priority: 2,
+      severity: "WARNING",
+      timestamp: new Date().toISOString(),
     });
     return problems;
   }
-
-  const io = getIO();
 
   switch (service.type)
   {
     case ServiceType.SNMP:
     {
-      io.emit("snmpService", result);
+      io.emit("snmpService", { ...result, service });
       writeSnmpMetrics(service.id, result);
-      const isDown = !result.sysName;
-      if (isDown)
-      {
-        problems.push(
-        {
-          serviceId: service.id,
-          serviceName: service.name,
-          metric: 'SNMP',
-          value: 0,
-          status: 'DOWN',
-          description: 'SNMP não retornou nome do sistema',
-        });
-      }
+
+      const analysis = analyzeSnmpIssue(service, result);
+      if (analysis)
+        problems.push(analysis);
       break;
     }
 
     case ServiceType.PING:
     {
-      io.emit("pingService", {...result, service});
+      io.emit("pingService", { ...result, service });
       writePingMetrics(service.id, result);
-      const isDown = result.status !== 'UP';
-      if (isDown) {
-        problems.push({
-          serviceId: service.id,
-          serviceName: service.name,
-          metric: 'PING',
-          value: result.avgMs ?? 0,
-          status: 'DOWN',
-          description: `Status: ${result.status}, perda de pacotes: ${result.lossPercent}%, min/avg/max/mdev: ${result.minMs}/${result.avgMs}/${result.maxMs}/${result.mdevMs}`,
-          lossPercent: result.lossPercent,
-        });
-      }
+
+      const analysis = analyzePingIssue(service, result);
+      if (analysis)
+        problems.push(analysis);
       break;
     }
 
     case ServiceType.HTTP:
     {
-      io.emit("httpService", {...result, service});
+      io.emit("httpService", { ...result, service });
       writeHttpMetrics(service.id, result);
-      const isDown = result.status !== 'UP';
-      if (isDown) {
-        problems.push({
-          serviceId: service.id,
-          serviceName: service.name,
-          metric: 'HTTP',
-          value: result.totalMs ?? 0,
-          status: 'DOWN',
-          description: `Status: ${result.status}, HTTP: ${result.httpStatus}, tempo total: ${result.totalMs}ms`,
-        });
-      }
+
+      const analysis = analyzeHttpIssue(service, result);
+      if (analysis)
+        problems.push(analysis);
       break;
     }
 
     case ServiceType.WEBHOOK:
     {
-      io.emit("webhookService", result);
+      io.emit("webhookService", { ...result, service });
       writeWebhookMetrics(service.id, result);
-      const isDown = result.status !== 'UP';
-      if (isDown) {
-        problems.push({
-          serviceId: service.id,
-          serviceName: service.name,
-          metric: 'WEBHOOK',
-          value: result.totalMs ?? 0,
-          status: 'DOWN',
-          description: `Status: ${result.status}, HTTP: ${result.httpStatus}, tempo total: ${result.totalMs}ms`,
-        });
-      }
+
+      const analysis = analyzeWebhookIssue(service, result);
+      if (analysis)
+        problems.push(analysis);
       break;
     }
-    default:
-      return [];
   }
   return problems;
 }
 
-export async function detectIssues(serviceId?: string): Promise<Array<any>>
+export async function detectIssues(serviceId?: string): Promise<Problem[]>
 {
-  const problems: Array<any> = [];
-  
+  const problems: Problem[] = [];
+
   const services: Service[] = serviceId
-    ? [await prisma.service.findUniqueOrThrow({ where: { id: serviceId } })]
+    ? [
+        await prisma.service.findUnique({ where: { id: serviceId } }),
+      ].filter((s): s is Service => s !== null)
     : await prisma.service.findMany();
 
   for (const service of services)
@@ -144,30 +125,7 @@ export async function detectIssues(serviceId?: string): Promise<Array<any>>
     {
       const result = await getServiceResult(service);
       const serviceProblems = await processServiceResult(service, result);
-
-      for (const p of serviceProblems)
-      {
-        let criticality = 'medium';
-        if (p.metric === 'PING')
-        {
-          if (p.lossPercent === 100)
-            criticality = 'critical';
-          else if (p.lossPercent >= 50)
-            criticality = 'high';
-        }
-        if (p.metric === 'HTTP')
-        {
-          if (result.httpStatus >= 500)
-            criticality = 'critical';
-          else if (result.httpStatus >= 400)
-            criticality = 'high';
-        }
-        if (p.metric === 'SNMP' || p.metric === 'WEBHOOK')
-        {
-          criticality = p.status === 'DOWN' ? 'high' : 'medium';
-        }
-        problems.push({ ...p, criticality });
-      }
+      problems.push(...serviceProblems);
     }
     catch (error)
     {
@@ -175,11 +133,14 @@ export async function detectIssues(serviceId?: string): Promise<Array<any>>
       {
         serviceId: service.id,
         serviceName: service.name,
-        metric: 'unknown',
+        metric: "unknown",
         value: 0,
-        status: 'DOWN',
-        description: `Erro ao monitorar: ${(error as Error).message}`,
-        criticality: 'high',
+        status: "UNKNOWN",
+        description: `Erro ao monitorar serviço: ${(error as Error).message}`,
+        recommendation: "Verifique logs da aplicação e conectividade da rede.",
+        priority: 1,
+        severity: "CRITICAL",
+        timestamp: new Date().toISOString(),
       });
     }
   }

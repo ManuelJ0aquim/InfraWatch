@@ -31,7 +31,7 @@ async function createDefaultSLIsForService(serviceId: string, type: ServiceType,
       {
         serviceId,
         metric: 'PING',
-        threshold: 98, // exemplo de SLI
+        threshold: 98,
         comparison: 'gte',
       });
       break;

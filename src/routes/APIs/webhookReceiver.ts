@@ -2,16 +2,16 @@ import { FastifyInstance } from "fastify";
 import { PrismaClient } from "@prisma/client";
 import { writeWebhookMetrics } from "../../Influxdb/WriteMetrics/WriteWebhookMetrics";
 import { CheckWebhookPassive } from "../../Monitoring/Checkers/CheckWEBHOOKPASSIVE.ts";
+import { writeWebhookEvent } from "../../Influxdb/WriteMetrics/WriteWebhookEvent";
 
 const prisma = new PrismaClient();
 
-export async function webhookReceiverRoutes(app: FastifyInstance)
-{
+export async function webhookReceiverRoutes(app: FastifyInstance) {
   app.post("/api/webhooks/:serviceId", {
     schema: {
       tags: ["Webhooks"],
       summary: "Recebe eventos de serviços via Webhook",
-      description: "Recebe payloads externos, armazena no Postgres (auditoria RNF06) e grava métricas no InfluxDB.",
+      description: "Recebe payloads externos, grava eventos e métricas no InfluxDB.",
       params: {
         type: "object",
         properties: {
@@ -87,20 +87,16 @@ export async function webhookReceiverRoutes(app: FastifyInstance)
       return reply.code(404).send({ error: "Service not found" });
     }
 
-    await prisma.webhookEvent.create({
-      data: {
-        serviceId,
-        payload,
-        sourceIp: request.ip,
-        userAgent: request.headers["user-agent"],
-        status: payload.status,
-        note: payload.msg,
-      },
+    await writeWebhookEvent({
+      serviceId,
+      payload,
+      sourceIp: request.ip,
+      userAgent: request.headers["user-agent"],
+      status: payload.status,
+      note: payload.msg,
     });
 
     const result = CheckWebhookPassive(payload);
-
-    writeWebhookMetrics(serviceId, result);
 
     return { ok: true, processed: result };
   });

@@ -9,50 +9,46 @@ datasource db {
 }
 
 model Service {
-  id           String         @id @default(uuid())
-  name         String
-  type         ServiceType
-  target       String
-  ownerId      String
-  criticality  String         @default("medium")
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-
-  User         User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  AlertContact AlertContact[]
-  SliTarget    SliTarget[]
-  Incident     Incident[]
-  WebhookEvent WebhookEvent[]
+  id                 String               @id @default(uuid())
+  name               String
+  type               ServiceType
+  target             String
+  ownerId            String
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  AlertContact       AlertContact[]
+  Incident           Incident[]
   NotificationPolicy NotificationPolicy[]
+  User               User                 @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  SliTarget          SliTarget[]
+  glpiId             String?              @unique
 
   @@index([ownerId])
   @@index([type])
-  @@index([criticality])
 }
 
 model User {
-  id                   String    @id @default(uuid())
-  name                 String
-  email                String    @unique
-  password             String
-  role                 Role      @default(USER)
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
-  passwordResetExpires DateTime?
-  passwordResetToken   String?
-
-  Service              Service[]
+  id                               String    @id @default(uuid())
+  name                             String
+  email                            String    @unique
+  password                         String
+  role                             Role      @default(USER)
+  createdAt                        DateTime  @default(now())
+  updatedAt                        DateTime  @updatedAt
+  passwordResetExpires             DateTime?
+  passwordResetToken               String?
+  Service                          Service[]
 }
 
 model SliTarget {
   id         String   @id @default(uuid())
   serviceId  String
-  service    Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
   metric     String
   threshold  Float
   comparison String
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  service    Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
   @@index([serviceId, metric])
 }
@@ -63,60 +59,44 @@ model AlertContact {
   to        String
   active    Boolean  @default(true)
   serviceId String
-  Service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  Service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
   @@index([serviceId, active])
 }
 
 model Incident {
-  id                 String   @id @default(uuid())
+  id                 String    @id @default(uuid())
   serviceId          String
-  service            Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  openedAt           DateTime @default(now())
+  openedAt           DateTime  @default(now())
   closedAt           DateTime?
   reason             String?
-  retryCount         Int      @default(0)
+  retryCount         Int       @default(0)
   lastNotificationAt DateTime?
+  service            Service   @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  glpiTicketId       String?
+  glpiTicketUrl      String?
 
   @@index([serviceId, openedAt])
   @@index([serviceId, closedAt])
 }
 
-model WebhookEvent {
-  id        String   @id @default(cuid())
-  serviceId String
-  service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  payload   Json
-  createdAt DateTime @default(now())
-
-  sourceIp  String?
-  userAgent String?
-  signature String?
-  status    String?
-  note      String?
-
-  @@index([serviceId, createdAt])
-  @@index([serviceId, status, createdAt])
-}
-
 model NotificationPolicy {
-  id                    String    @id @default(uuid())
+  id                    String   @id @default(uuid())
   serviceId             String?
-  service               Service?  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-
-  maxRetries            Int       @default(3)
-  retryIntervalMinutes  Int       @default(2)
-  escalateAfterMinutes  Int       @default(10)
-  cooldownMinutes       Int       @default(15)
-  recoveryConfirmations Int       @default(2)    // nº de UP consecutivos para fechar incidente
-  channels              String[]  @default([])   // ["email","slack","telegram","twilio"]
-  active                Boolean   @default(true)
-  isDefault             Boolean   @default(false)
-
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  maxRetries            Int      @default(3)
+  retryIntervalMinutes  Int      @default(2)
+  escalateAfterMinutes  Int      @default(10)
+  cooldownMinutes       Int      @default(15)
+  recoveryConfirmations Int      @default(2)
+  channels              String[] @default([])
+  active                Boolean  @default(true)
+  isDefault             Boolean  @default(false)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  service               Service? @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
   @@index([serviceId, active])
 }

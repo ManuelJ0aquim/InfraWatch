@@ -12,8 +12,8 @@ export function writeWebhookMetrics(serviceId: string, data: any)
     .floatField('dnsMs', data.dnsMs ?? 0)
     .floatField('connectAndDownloadMs', data.connectAndDownloadMs ?? 0)
     .floatField('totalMs', data.totalMs ?? 0)
-    .stringField('payloadSent', JSON.stringify(data.payloadSent ?? {})) // salva payload enviado
-    .stringField('responseBody', data.responseBody ? String(data.responseBody) : '') // corpo resposta
+    .stringField('payloadSent', JSON.stringify(data.payloadSent ?? {}))
+    .stringField('responseBody', data.responseBody ? String(data.responseBody) : '')
     .timestamp(new Date());
 
   if (data.headers)

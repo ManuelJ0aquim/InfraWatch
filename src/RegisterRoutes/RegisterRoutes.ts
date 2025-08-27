@@ -13,20 +13,13 @@ import { alertContactRoutes } from '../routes/APIs/alertContactRoutes';
 import { webhookReceiverRoutes } from '../routes/APIs/webhookReceiver';
 import { solicitarResetSenhaRoutes } from "../routes/Auth/SolicitarResetPasswordRoutes.js";
 import { notificationPolicyRoutes } from '../routes/APIs/notificationPolicy';
-import { incidentRoutes } from '../routes/APIs/incidents';
+import { incidentRoutes } from '../routes/APIs/IncidentsRoutes';
 import { slaRoutes } from "../routes/APIs/slaRoutes";
-// import fastifyStatic from '@fastify/static';
-// import path from 'path';
-
 
 export async function RegisterAllRoutes(app: FastifyInstance)
 {    
     app.register(prisma);
     app.register(jwtPlugin);
-    // app.register(fastifyStatic, {
-    //     root: path.join(process.cwd(), 'reports'),
-    //     prefix: '/reports/', // todos os arquivos ficam acessíveis em /reports/*
-    //   });
     app.register(webhookReceiverRoutes);
     app.register(slaRoutes, { prefix: "/api" });
     app.register(servicesRoutes);

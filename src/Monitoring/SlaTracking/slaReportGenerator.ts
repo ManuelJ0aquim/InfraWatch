@@ -1,16 +1,17 @@
-import fs from "fs";
 import PDFDocument from "pdfkit";
-import { SlaResult } from "./slaCalculator";
 
-export class SlaReportGenerator
-{
-  static async generatePDF(serviceName: string, sla: SlaResult, start: Date, end: Date, filePath: string)
-  {
-    return new Promise<void>((resolve, reject) => {
+export class SlaReportGenerator {
+  static async generatePDF(serviceName: string, sla: any, start: Date, end: Date): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
       const doc = new PDFDocument({ margin: 50 });
-      const stream = fs.createWriteStream(filePath);
+      const buffers: Buffer[] = [];
 
-      doc.pipe(stream);
+      doc.on("data", buffers.push.bind(buffers));
+      doc.on("end", () => {
+        const pdfBuffer = Buffer.concat(buffers);
+        resolve(pdfBuffer);
+      });
+      doc.on("error", reject);
 
       doc.fontSize(20).text(`Relatório de SLA - ${serviceName}`, { align: "center" });
       doc.moveDown();
@@ -30,9 +31,6 @@ export class SlaReportGenerator
       doc.fontSize(10).fillColor("gray").text("Gerado automaticamente pelo sistema de monitoramento.");
 
       doc.end();
-
-      stream.on("finish", () => resolve());
-      stream.on("error", (err) => reject(err));
     });
   }
 }

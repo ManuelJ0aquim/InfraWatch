@@ -1,56 +1,91 @@
 // src/routes/APIs/slaRoutes.ts
 import { FastifyInstance } from "fastify";
-import path from "path";
-import fs from "fs";
 import { SlaService } from "../../Monitoring/SlaTracking/slaService";
 import { SlaReportGenerator } from "../../Monitoring/SlaTracking/slaReportGenerator";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-export async function slaRoutes(fastify: FastifyInstance) {
-  fastify.get("/sla/:serviceId/:period", async (request, reply) => {
-    const { serviceId, period } = request.params as any;
-    const { format } = request.query as any;
+export async function slaRoutes(app: FastifyInstance)
+{
+  app.get("/sla/:serviceId/:period", {
+    schema: {
+      tags: ["SLA"],
+      summary: "Gerar relatório de SLA de um serviço",
+      params: {
+        type: "object",
+        properties: {
+          serviceId: { type: "string" },
+          period: { 
+            type: "string", 
+            description: "Período (ex: 'last-7d', 'last-30d', '2025-01')" 
+          },
+        },
+        required: ["serviceId", "period"],
+      },
+      querystring: {
+        type: "object",
+        properties: {
+          format: { 
+            type: "string", 
+            enum: ["json", "pdf"], 
+            default: "json" 
+          },
+        },
+      },
+      response: {
+        200: {
+          oneOf: [
+            {
+              type: "object",
+              properties: {
+                service: { type: "string" },
+                period: { type: "string" },
+                sla: {
+                  type: "object",
+                  properties: {
+                    uptimePercentage: { type: "number" },
+                    downtimeMinutes: { type: "number" },
+                    incidents: { type: "array", items: { type: "object" } },
+                  },
+                },
+              },
+            },
+            { type: "string", description: "PDF stream" },
+          ],
+        },
+      },
+    },
+    handler: async (req, reply) => {
+      const { serviceId, period } = req.params as any;
+      const { format } = req.query as any;
 
-    // Buscar nome do serviço no banco
-    const service = await prisma.service.findUnique({
-      where: { id: serviceId },
-    });
+      // Buscar serviço
+      const service = await prisma.service.findUnique({ where: { id: serviceId } });
+      if (!service) return reply.status(404).send({ error: "Serviço não encontrado" });
 
-    if (!service) {
-      return reply.status(404).send({ error: "Serviço não encontrado" });
-    }
+      // Calcular período e gerar SLA
+      const { start, end } = (SlaService as any).parsePeriod(period);
+      const sla = await SlaService.getSlaReport(serviceId, start, end);
 
-    const { start, end } = (SlaService as any).parsePeriod(period);
-    const sla = await SlaService.getSlaReport(serviceId, start, end);
+      if (format === "pdf") {
+        const pdfBuffer = await SlaReportGenerator.generatePDF(
+          service.name,
+          sla,
+          start,
+          end
+        );
 
-    if (format === "pdf") {
-      const reportsDir = path.join(process.cwd(), "reports");
-      if (!fs.existsSync(reportsDir)) fs.mkdirSync(reportsDir);
+        reply.header("Content-Type", "application/pdf");
+        reply.header(
+          "Content-Disposition",
+          `attachment; filename="sla-${service.name}-${period}.pdf"`
+        );
 
-      const filePath = path.join(
-        reportsDir,
-        `sla-${service.name}-${period}.pdf`
-      );
+        return reply.send(pdfBuffer);
+      }
 
-      await SlaReportGenerator.generatePDF(
-        service.name,
-        sla,
-        start,
-        end,
-        filePath
-      );
-
-      reply.header("Content-Type", "application/pdf");
-      reply.header(
-        "Content-Disposition",
-        `attachment; filename="sla-${service.name}-${period}.pdf"`
-      );
-      return reply.send(fs.createReadStream(filePath));
-    }
-
-    // Default = JSON
-    return { service: service.name, period, sla };
+      return { service: service.name, period, sla };
+    },
   });
 }
