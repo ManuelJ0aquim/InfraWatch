@@ -1,8 +1,8 @@
-// src/Influxdb/WriteMetrics/WriteSnmpMetrics.ts
 import { Point } from "@influxdata/influxdb-client";
 import { writeApi } from "../influxdb";
 
-export async function writeSnmpMetrics(serviceId: string, data: any) {
+export async function writeSnmpMetrics(serviceId: string, data: any)
+{
   const point = new Point("snmp_metrics")
     .tag("serviceId", serviceId)
     .tag("ip", data.ip)

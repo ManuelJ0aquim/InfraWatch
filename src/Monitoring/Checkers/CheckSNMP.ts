@@ -3,6 +3,7 @@ import { Service } from "@prisma/client";
 import { SNMP_OIDS } from "../../config/snmpConfig";
 
 function createSession(ip: string, community: string, port: number) {
+  console.log(`[SNMP] Criando sessão para ${ip}:${port} (community=${community})`);
   return snmp.createSession(ip, community, {
     port,
     timeout: 30000,
@@ -17,33 +18,39 @@ function safeSnmpValue(value: any, type: number): string {
   return value.toString();
 }
 
-export async function CheckSNMP(service: Service)
-{
+export async function CheckSNMP(service: Service) {
   if (!service.snmpCommunity) {
-    throw new Error(`Serviço ${service.name} não possui community SNMP configurada`);
+    throw new Error(`[SNMP] Serviço ${service.name} não possui community SNMP configurada`);
   }
 
   const session = createSession(service.target, service.snmpCommunity, service.snmpPort ?? 161);
 
+  console.log(`[SNMP] Recuperando métricas gerais para ${service.name} (${service.target})`);
   const generalMetrics: Record<string, string> = await new Promise((resolve, reject) => {
     session.get(
-      Object.values(SNMP_OIDS).filter(oid => ![
-        SNMP_OIDS.ifIndex,
-        SNMP_OIDS.ifDescr,
-        SNMP_OIDS.ifType,
-        SNMP_OIDS.ifAdminStatus,
-        SNMP_OIDS.ifOperStatus,
-        SNMP_OIDS.ifAlias,
-        SNMP_OIDS.ifPhysAddress,
-        SNMP_OIDS.ifInOctets,
-        SNMP_OIDS.ifOutOctets,
-        SNMP_OIDS.ipAddrTable
-      ].includes(oid)),
+      Object.values(SNMP_OIDS).filter(
+        oid => ![
+          SNMP_OIDS.ifIndex,
+          SNMP_OIDS.ifDescr,
+          SNMP_OIDS.ifType,
+          SNMP_OIDS.ifAdminStatus,
+          SNMP_OIDS.ifOperStatus,
+          SNMP_OIDS.ifAlias,
+          SNMP_OIDS.ifPhysAddress,
+          SNMP_OIDS.ifInOctets,
+          SNMP_OIDS.ifOutOctets,
+          SNMP_OIDS.ipAddrTable
+        ].includes(oid)
+      ),
       (err: any, varbinds: any) => {
-        if (err) return reject(err);
+        if (err) {
+          console.log(`[SNMP] Erro ao obter métricas gerais: ${err.message}`);
+          return reject(err);
+        }
         const result: Record<string, string> = {};
         varbinds.forEach(vb => {
           result[vb.oid] = !snmp.isVarbindError(vb) ? safeSnmpValue(vb.value, vb.type) : "N/A";
+          console.log(`[SNMP] Geral: OID=${vb.oid}, valor=${result[vb.oid]}`);
         });
         resolve(result);
       }
@@ -64,6 +71,7 @@ export async function CheckSNMP(service: Service)
 
   const interfaces: any[] = [];
   for (const oid of interfaceOIDs) {
+    console.log(`[SNMP] Varredura da tabela de interfaces para OID ${oid}`);
     const rows = await SnmpWalk(service, oid);
     rows.forEach(vb => {
       const parts = vb.oid.split(".");
@@ -83,18 +91,24 @@ export async function CheckSNMP(service: Service)
         case SNMP_OIDS.ifInOctets: iface.inOctets = vb.value; break;
         case SNMP_OIDS.ifOutOctets: iface.outOctets = vb.value; break;
       }
+      console.log(`[SNMP] Interface index=${index}, OID=${oid}, valor=${vb.value}`);
     });
   }
 
+  console.log(`[SNMP] Varredura da tabela IP`);
   const ipRows = await SnmpWalk(service, SNMP_OIDS.ipAddrTable);
   ipRows.forEach(vb => {
     const parts = vb.oid.split(".");
     const index = parts[parts.length - 1];
     const iface = interfaces.find(i => i.index === index);
-    if (iface) iface.ip = vb.value;
+    if (iface) {
+      iface.ip = vb.value;
+      console.log(`[SNMP] Interface index=${index} IP=${vb.value}`);
+    }
   });
 
   session.close();
+  console.log(`[SNMP] Sessão finalizada para ${service.target}`);
 
   return {
     timestamp: new Date().toISOString(),
@@ -113,6 +127,7 @@ export async function CheckSNMP(service: Service)
 }
 
 export async function SnmpWalk(service: Service, oid: string) {
+  console.log(`[SNMP] Iniciando SnmpWalk para OID ${oid} no host ${service.target}`);
   const session = createSession(service.target, service.snmpCommunity!, service.snmpPort ?? 161);
   const results: any[] = [];
 
@@ -128,8 +143,13 @@ export async function SnmpWalk(service: Service, oid: string) {
       },
       (error: any) => {
         session.close();
-        if (error) reject(error);
-        else resolve(results);
+        if (error) {
+          console.log(`[SNMP] Erro no SnmpWalk para OID ${oid}: ${error.message}`);
+          reject(error);
+        } else {
+          console.log(`[SNMP] Concluído SnmpWalk para OID ${oid}, ${results.length} resultados`);
+          resolve(results);
+        }
       }
     );
   });
