@@ -1,111 +1,136 @@
-import snmp from 'net-snmp';
+import snmp from "net-snmp";
+import { Service } from "@prisma/client";
+import { SNMP_OIDS } from "../../config/snmpConfig";
 
-interface SNMPData {
-  uptime?: string;
-  sysName?: string;
-  sysDescr?: string;
-  cpuLoad1min?: number;
-  memTotalKB?: number;
-  memAvailKB?: number;
-  memUsagePercent?: number;
-  interfaces?:
-  {
-    index: string;
-    description: string;
-    status: string;
-    inOctets?: number;
-    outOctets?: number;
-  }[];
-  responseMs: number;
+function createSession(ip: string, community: string, port: number) {
+  return snmp.createSession(ip, community, {
+    port,
+    timeout: 30000,
+    version: snmp.Version2c,
+  });
 }
 
-export async function CheckSNMP(target: string, community = 'public', timeoutMs = 5000): Promise<SNMPData>
+function safeSnmpValue(value: any, type: number): string {
+  if (Buffer.isBuffer(value)) return value.toString("utf8");
+  if (typeof value === "number" || type === 2 || type === 64) return value.toString();
+  if (value === null || value === undefined) return "N/A";
+  return value.toString();
+}
+
+export async function CheckSNMP(service: Service)
 {
-  const session = snmp.createSession(target, community, { timeout: timeoutMs });
-
-  const OIDS = {
-    // uptime: '1.3.6.1.2.1.1.3.0',
-    sysName: '1.3.6.1.2.1.1.5.0',
-    sysDescr: '1.3.6.1.2.1.1.1.0',
-    sysUpTime: '1.3.6.1.2.1.1.3.0'
-    // cpuLoad1min: '1.3.6.1.4.1.2021.10.1.3.1',
-    // memTotalKB: '1.3.6.1.4.1.2021.4.5.0',
-    // memAvailKB: '1.3.6.1.4.1.2021.4.6.0'
-
-  };
-
-  const start = Date.now();
-
-  const getOids = (oids: string[]) =>
-  {
-    return new Promise<any[]>((resolve, reject) => {
-      session.get(oids, (err: any, varbinds: any) => {
-        if (err) return reject(err);
-        resolve(varbinds);
-      });
-    });
-  };
-
-  const walk = (oid: string) => {
-    return new Promise<any[]>((resolve, reject) => {
-      const results: any[] = [];
-      session.subtree(oid, (vb: any) => {
-        if (!snmp.isVarbindError(vb)) results.push(vb);
-      }, (err:any) => {
-        if (err) return reject(err);
-        resolve(results);
-      });
-    });
-  };
-
-  try
-  {
-    const baseData: any = { responseMs: 0 };
-
-    const varbinds = await getOids(Object.values(OIDS));
-    varbinds.forEach(vb =>
-    {
-      const key = Object.keys(OIDS).find(k => OIDS[k as keyof typeof OIDS] === vb.oid) as keyof SNMPData;
-      if (key && vb.value !== null) baseData[key] = vb.value;
-    });
-
-    if (baseData.cpuLoad1min)
-      baseData.cpuLoad1min = parseFloat(String(baseData.cpuLoad1min));
-    if (baseData.memTotalKB && baseData.memAvailKB)
-    {
-      baseData.memUsagePercent = Number(((1 - (baseData.memAvailKB / baseData.memTotalKB)) * 100).toFixed(2));
-    }
-
-    const [ifDescr, ifStatus, ifInOctets, ifOutOctets] = await Promise.all([
-      walk('1.3.6.1.2.1.2.2.1.2'),  // Nome
-      walk('1.3.6.1.2.1.2.2.1.8'),  // Status
-      walk('1.3.6.1.2.1.2.2.1.10'), // Bytes recebidos
-      walk('1.3.6.1.2.1.2.2.1.16')  // Bytes enviados
-    ]);
-
-    const interfaces = ifDescr.map(vb =>
-    {
-      const index = vb.oid.split('.').pop()!;
-      const statusVb = ifStatus.find(s => s.oid.endsWith(`.${index}`));
-      const inVb = ifInOctets.find(s => s.oid.endsWith(`.${index}`));
-      const outVb = ifOutOctets.find(s => s.oid.endsWith(`.${index}`));
-
-      return {
-        index,
-        description: vb.value.toString(),
-        status: ['unknown', 'up', 'down', 'testing'][statusVb?.value as number] || 'unknown',
-        inOctets: inVb?.value ?? 0,
-        outOctets: outVb?.value ?? 0
-      };
-    });
-
-    baseData.interfaces = interfaces;
-    baseData.responseMs = Date.now() - start;
-
-    return baseData;
+  if (!service.snmpCommunity) {
+    throw new Error(`Serviço ${service.name} não possui community SNMP configurada`);
   }
-  finally
-  {
-    session.close();
+
+  const session = createSession(service.target, service.snmpCommunity, service.snmpPort ?? 161);
+
+  const generalMetrics: Record<string, string> = await new Promise((resolve, reject) => {
+    session.get(
+      Object.values(SNMP_OIDS).filter(oid => ![
+        SNMP_OIDS.ifIndex,
+        SNMP_OIDS.ifDescr,
+        SNMP_OIDS.ifType,
+        SNMP_OIDS.ifAdminStatus,
+        SNMP_OIDS.ifOperStatus,
+        SNMP_OIDS.ifAlias,
+        SNMP_OIDS.ifPhysAddress,
+        SNMP_OIDS.ifInOctets,
+        SNMP_OIDS.ifOutOctets,
+        SNMP_OIDS.ipAddrTable
+      ].includes(oid)),
+      (err: any, varbinds: any) => {
+        if (err) return reject(err);
+        const result: Record<string, string> = {};
+        varbinds.forEach(vb => {
+          result[vb.oid] = !snmp.isVarbindError(vb) ? safeSnmpValue(vb.value, vb.type) : "N/A";
+        });
+        resolve(result);
+      }
+    );
+  });
+
+  const interfaceOIDs = [
+    SNMP_OIDS.ifIndex,
+    SNMP_OIDS.ifDescr,
+    SNMP_OIDS.ifType,
+    SNMP_OIDS.ifAdminStatus,
+    SNMP_OIDS.ifOperStatus,
+    SNMP_OIDS.ifAlias,
+    SNMP_OIDS.ifPhysAddress,
+    SNMP_OIDS.ifInOctets,
+    SNMP_OIDS.ifOutOctets,
+  ];
+
+  const interfaces: any[] = [];
+  for (const oid of interfaceOIDs) {
+    const rows = await SnmpWalk(service, oid);
+    rows.forEach(vb => {
+      const parts = vb.oid.split(".");
+      const index = parts[parts.length - 1];
+      let iface = interfaces.find(i => i.index === index);
+      if (!iface) {
+        iface = { index };
+        interfaces.push(iface);
+      }
+      switch (oid) {
+        case SNMP_OIDS.ifDescr: iface.name = vb.value; break;
+        case SNMP_OIDS.ifType: iface.type = vb.value; break;
+        case SNMP_OIDS.ifAdminStatus: iface.adminStatus = vb.value; break;
+        case SNMP_OIDS.ifOperStatus: iface.status = vb.value; break;
+        case SNMP_OIDS.ifAlias: iface.alias = vb.value; break;
+        case SNMP_OIDS.ifPhysAddress: iface.mac = vb.value; break;
+        case SNMP_OIDS.ifInOctets: iface.inOctets = vb.value; break;
+        case SNMP_OIDS.ifOutOctets: iface.outOctets = vb.value; break;
+      }
+    });
   }
+
+  const ipRows = await SnmpWalk(service, SNMP_OIDS.ipAddrTable);
+  ipRows.forEach(vb => {
+    const parts = vb.oid.split(".");
+    const index = parts[parts.length - 1];
+    const iface = interfaces.find(i => i.index === index);
+    if (iface) iface.ip = vb.value;
+  });
+
+  session.close();
+
+  return {
+    timestamp: new Date().toISOString(),
+    ip: service.target,
+    sysName: generalMetrics[SNMP_OIDS.sysName],
+    metrics: {
+      sysDescr: generalMetrics[SNMP_OIDS.sysDescr],
+      sysUpTime: generalMetrics[SNMP_OIDS.sysUpTime],
+      cpu5Sec: generalMetrics[SNMP_OIDS.cpuLoad1min],
+      memFree: generalMetrics[SNMP_OIDS.memAvail],
+      memUsed: generalMetrics[SNMP_OIDS.memTotal],
+      ifOperStatus: generalMetrics[SNMP_OIDS.ifOperStatus],
+    },
+    interfaces
+  };
+}
+
+export async function SnmpWalk(service: Service, oid: string) {
+  const session = createSession(service.target, service.snmpCommunity!, service.snmpPort ?? 161);
+  const results: any[] = [];
+
+  return new Promise<any[]>((resolve, reject) => {
+    session.subtree(
+      oid,
+      (varbind: any) => {
+        results.push({
+          oid: varbind.oid,
+          value: safeSnmpValue(varbind.value, varbind.type),
+          type: varbind.type,
+        });
+      },
+      (error: any) => {
+        session.close();
+        if (error) reject(error);
+        else resolve(results);
+      }
+    );
+  });
 }

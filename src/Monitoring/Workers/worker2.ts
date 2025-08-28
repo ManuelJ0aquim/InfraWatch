@@ -28,7 +28,7 @@ async function getServiceResult(service: Service)
     case ServiceType.PING:
       return CheckPING(service.target);
     case ServiceType.SNMP:
-      return CheckSNMP(service.target);
+      return CheckSNMP(service);
     case ServiceType.WEBHOOK:
       return CheckWebhook(service.target);
     default:
@@ -64,6 +64,7 @@ async function processServiceResult(service: Service, result: any): Promise<Prob
   {
     case ServiceType.SNMP:
     {
+      console.log("SNMP", result, service);
       io.emit("snmpService", { ...result, service });
       writeSnmpMetrics(service.id, result);
 
@@ -75,6 +76,7 @@ async function processServiceResult(service: Service, result: any): Promise<Prob
 
     case ServiceType.PING:
     {
+      // console.log("PING", result, service);
       io.emit("pingService", { ...result, service });
       writePingMetrics(service.id, result);
 
@@ -86,6 +88,7 @@ async function processServiceResult(service: Service, result: any): Promise<Prob
 
     case ServiceType.HTTP:
     {
+      // console.log("HTTP", result, service);
       io.emit("httpService", { ...result, service });
       writeHttpMetrics(service.id, result);
 
