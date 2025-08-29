@@ -2,6 +2,8 @@
 import { GLPIClient } from '@atno/ts-glpi-client';
 import dotenv from 'dotenv';
 import { PrismaClient, ServiceType, Role } from '@prisma/client';
+import axios from 'axios';
+import 'dotenv/config';
 
 dotenv.config();
 
@@ -47,47 +49,146 @@ async function getOrCreateDefaultUser() {
   return defaultUser.id;
 }
 
+// export async function syncGlpiInventory() {
+//   try {
+//     if (!apiClient) {
+//       await initGlpiSession();
+//     }
+
+//     const response = await apiClient.actives.getAll('Computer') ; // ou outro tipo de item
+//     const items = response.data;
+//     const defaultOwnerId = await getOrCreateDefaultUser();
+//     console.log('Itens recebidos do GLPI:', items);
+
+//     if (!Array.isArray(items)) {
+//       throw new Error('GLPI não retornou uma lista de computadores.');
+//     }
+
+//     for (const item of items) {
+//       await prisma.service.upsert({
+//         where: { id: item.id.toString() },
+//         update: {
+//           name: item.name,
+//           target: item.ip || item.name,
+//           type: ServiceType.PING,
+//           criticality: item.criticality || 'medium',
+//         },
+//         create: {
+//           id: item.id.toString(),
+//           name: item.name,
+//           target: item.ip || item.name,
+//           type: ServiceType.PING,
+//           ownerId: defaultOwnerId,
+//           criticality: item.criticality || 'medium',
+//           createdAt: new Date(),
+//           updatedAt: new Date(),
+//         },
+//       });
+//     }
+
+//     console.log('Inventário GLPI sincronizado com sucesso.');
+//   } catch (error: any) {
+//     console.error('Erro ao sincronizar inventário GLPI:', error);
+//     throw new Error(`Falha na sincronização: ${error.message}`);
+//   }
+// }
+
+const GLPI_INVENTORY_URL = process.env.GLPI_INVENTORY_URL || 'http://localhost:8080/front/inventory.php';
+const GLPI_AGENT_TOKEN = process.env.GLPI_AGENT_TOKEN;
+const INFRAWATCH_API_URL = 'http://localhost:3002/api';
+
 export async function syncGlpiInventory() {
+  // Validate environment variables
+  if (!GLPI_INVENTORY_URL || !GLPI_AGENT_TOKEN) {
+    console.error('GLPI inventory configuration is incomplete');
+    return;
+  }
+
   try {
-    if (!apiClient) {
-      await initGlpiSession();
-    }
+    // Fetch all services
+    const servicesResponse = await axios.get(`${INFRAWATCH_API_URL}/services`, {
+      headers: { accept: 'application/json' },
+    });
+    const services = servicesResponse.data;
 
-    const response = await apiClient.actives.getAll('Computer') ; // ou outro tipo de item
-    const items = response.data;
-    const defaultOwnerId = await getOrCreateDefaultUser();
-    console.log('Itens recebidos do GLPI:', items);
+    for (const service of services) {
+      // Fetch metrics for HTTP services
+      let metrics = {};
+      if (service.type === 'HTTP') {
+        try {
+          const metricsResponse = await axios.get(`${INFRAWATCH_API_URL}/services/${service.id}/metrics/http`, {
+            headers: { accept: 'application/json' },
+          });
+          metrics = metricsResponse.data[0] || {};
+        } catch (error) {
+          console.error(`Failed to fetch metrics for service ${service.id}:`, error.message);
+        }
+      }
 
-    if (!Array.isArray(items)) {
-      throw new Error('GLPI não retornou uma lista de computadores.');
-    }
+      // Map service type to GLPI asset type
+      const assetTypeMap: { [key: string]: string } = {
+        HTTP: 'Computer',
+        PING: 'Computer',
+        SNMP: 'NetworkEquipment',
+      };
+      const glpiAssetType = assetTypeMap[service.type] || 'Computer';
 
-    for (const item of items) {
-      await prisma.service.upsert({
-        where: { id: item.id.toString() },
-        update: {
-          name: item.name,
-          target: item.ip || item.name,
-          type: ServiceType.PING,
-          criticality: item.criticality || 'medium',
+      // Generate GLPI inventory JSON
+      const inventoryJson = {
+        _tracking_inventory: 1,
+        content: {
+          hardware: {
+            name: service.name || 'Unknown Asset',
+            uuid: `infrawatch-${service.id}`,
+            // Add more hardware fields if metrics provide them (e.g., memory_size, cpu_name)
+          },
+          os: {
+            full_name: service.type === 'SNMP' ? 'Network OS' : 'Unknown OS',
+            version: 'N/A',
+          },
+          networks: [
+            {
+              description: `Service Target: ${service.name}`,
+              ipaddress: metrics.ip || (service.target.includes('://') ? service.target.split('://')[1].split('/')[0] : service.target),
+              mac: metrics.mac || '', // Add if available from metrics
+            },
+          ],
+          softwares: [
+            {
+              name: service.name,
+              version: 'N/A',
+              comment: `Service Type: ${service.type}, Status: ${metrics.status || 'Unknown'}`,
+            },
+          ],
+          // Add virtualmachines if your services include VMs/containers
         },
-        create: {
-          id: item.id.toString(),
-          name: item.name,
-          target: item.ip || item.name,
-          type: ServiceType.PING,
-          ownerId: defaultOwnerId,
-          criticality: item.criticality || 'medium',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      });
-    }
+        device_id: `infrawatch-${service.id}`,
+        tag: 'infrawatch-auto',
+      };
 
-    console.log('Inventário GLPI sincronizado com sucesso.');
-  } catch (error: any) {
-    console.error('Erro ao sincronizar inventário GLPI:', error);
-    throw new Error(`Falha na sincronização: ${error.message}`);
+      // Push to GLPI
+      try {
+        const response = await axios.post(GLPI_INVENTORY_URL, inventoryJson, {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${GLPI_AGENT_TOKEN}`,
+          },
+        });
+
+        if (response.status !== 200) {
+          console.error(`Failed to push service ${service.id} to GLPI:`, response.data);
+        } else {
+          console.log(`Synced service ${service.id} to GLPI`);
+        }
+      } catch (error) {
+        console.error(`Error pushing service ${service.id} to GLPI:`, error.message);
+        if (error.response?.data?.includes('Inventory is disabled')) {
+          console.error('GLPI inventory is disabled. Enable it in Administration > Inventory.');
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error syncing assets to GLPI:', error.message);
   }
 }
 

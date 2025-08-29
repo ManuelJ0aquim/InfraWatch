@@ -75,7 +75,7 @@ async function processServiceResult(service: Service, result: any)
       await prisma.service.update({
         where: { id: service.id },
         data: {
-          status: Status.UP,
+          status: 'UP',
           sysName: result.sysName || null,
           sysDescr: result.sysDescr || null,
         },
