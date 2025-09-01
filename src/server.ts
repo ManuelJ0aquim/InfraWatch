@@ -118,7 +118,7 @@ const start = async () => {
     });
 
     // Schedule hourly GLPI sync
-    cron.schedule('0 * * * *', async () => {
+    cron.schedule('*/5 * * * *', async () => {
       console.log('Sincronizando inventário com GLPI...');
       await syncGlpiInventory();
     });

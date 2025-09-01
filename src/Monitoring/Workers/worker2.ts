@@ -8,7 +8,8 @@ import { writeSnmpMetrics } from '../../Influxdb/WriteMetrics/WriteSnmpMetrics';
 import { writePingMetrics } from '../../Influxdb/WriteMetrics/WritePingMetrics';
 import { writeHttpMetrics } from '../../Influxdb/WriteMetrics/WriteHttpMetrics';
 import { writeWebhookMetrics } from '../../Influxdb/WriteMetrics/WriteWebhookMetrics';
-import { createGlpiTicket } from '../../Integrations/GLPI/glpiClient';
+//import { createGlpiTicket } from '../../Integrations/GLPI/glpiClient';
+import { createGlpiTicket } from '../../Integrations/GLPI/ticketManager';
 
 const prisma = new PrismaClient();
 

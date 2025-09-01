@@ -124,6 +124,14 @@ export async function syncGlpiInventory() {
           console.error(`Failed to fetch metrics for service ${service.id}:`, error.message);
         }
       }
+      if (service.type === 'SNMP') {
+        try {
+          const snmpMetrics = await axios.get(`${INFRAWATCH_API_URL}/services/${service.id}/metrics/snmp`);
+          metrics = { ...metrics, ...snmpMetrics.data[0] };
+        } catch (error) {
+          console.error(`Falha ao buscar métricas SNMP para ${service.id}:`, error.message);
+        }
+      }
 
       // Map service type to GLPI asset type
       const assetTypeMap: { [key: string]: string } = {
@@ -135,11 +143,17 @@ export async function syncGlpiInventory() {
 
       // Generate GLPI inventory JSON
       const inventoryJson = {
-        _tracking_inventory: 1,
+        //_tracking_inventory: 1,
+        deviceid: `infrawatch-${service.id}`,
         content: {
+          versionclient: '1.0',
           hardware: {
             name: service.name || 'Unknown Asset',
             uuid: `infrawatch-${service.id}`,
+            memory_size: metrics.memory || 0,
+            cpu_names: metrics.cpu || "Desconhecido",
+            serial: `INFRAWATCH-${service.id}`, // Adicionado para unicidade
+            entities_id: 0, // Ajuste conforme a entidade do GLPI
             // Add more hardware fields if metrics provide them (e.g., memory_size, cpu_name)
           },
           os: {
@@ -156,13 +170,20 @@ export async function syncGlpiInventory() {
           softwares: [
             {
               name: service.name,
-              version: 'N/A',
+              version: metrics.packageVersion ||'N/A',
               comment: `Service Type: ${service.type}, Status: ${metrics.status || 'Unknown'}`,
             },
           ],
           // Add virtualmachines if your services include VMs/containers
+          "virtualmachines": [
+            {
+              "name": service.name,
+              "uuid": `vm-${service.id}`,
+              "comment": `Tipo de Serviço: ${service.type}`
+            }
+          ],
         },
-        device_id: `infrawatch-${service.id}`,
+        deviceid: `infrawatch-${service.id}`,
         tag: 'infrawatch-auto',
       };
 
@@ -181,9 +202,17 @@ export async function syncGlpiInventory() {
           console.log(`Synced service ${service.id} to GLPI`);
         }
       } catch (error) {
-        console.error(`Error pushing service ${service.id} to GLPI:`, error.message);
-        if (error.response?.data?.includes('Inventory is disabled')) {
-          console.error('GLPI inventory is disabled. Enable it in Administration > Inventory.');
+        console.error(`Erro ao enviar serviço ${service.id} para o GLPI:`, error.message);
+        // Corrigir verificação de erro
+        const errorMessage = error.response?.data
+          ? typeof error.response.data === 'string'
+            ? error.response.data
+            : JSON.stringify(error.response.data)
+          : 'Sem detalhes de erro';
+        if (errorMessage.includes('Inventory is disabled')) {
+          console.error('Inventário do GLPI está desabilitado. Habilite em Administração > Inventário.');
+        } else {
+          console.error('Detalhes do erro do GLPI:', errorMessage);
         }
       }
     }
@@ -192,42 +221,42 @@ export async function syncGlpiInventory() {
   }
 }
 
-export async function createGlpiTicket(serviceName: string, description: string, criticality: string) {
-  try {
-    const sessionToken = await initGlpiSession();
-    const ticketData = {
-      name: `Falha no serviço: ${serviceName}`,
-      content: description,
-      urgency: criticality === 'high' ? 5 : criticality === 'medium' ? 3 : 1, // Mapeia criticidade
-      impact: criticality === 'high' ? 5 : criticality === 'medium' ? 3 : 1,
-      priority: criticality === 'high' ? 5 : criticality === 'medium' ? 3 : 1,
-      entities_id: 0, // Ajuste para a entidade desejada no GLPI
-      type: 1, // 1 = Incidente, 2 = Requisição
-    };
-    const ticket = await apiClient.assistance.add('Ticket', ticketData, { sessionToken });
-    //console.log('Resposta completa do GLPI:', JSON.stringify(ticket, null, 2));
-    const ticketId = ticket.id || ticket.data?.id || ticket.input?.id; // Tenta diferentes propriedades
-    if (!ticketId) {
-      throw new Error('ID do ticket não encontrado na resposta do GLPI');
-    }
-    console.log('Ticket criado no GLPI:', ticketId);
-    return ticketId;
-  } catch (error) {
-    console.error('Erro ao criar ticket no GLPI:', error);
-    throw new Error(`Falha ao criar ticket: ${error.message}`);
-  }
-}
+// export async function createGlpiTicket(serviceName: string, description: string, criticality: string) {
+//   try {
+//     const sessionToken = await initGlpiSession();
+//     const ticketData = {
+//       name: `Falha no serviço: ${serviceName}`,
+//       content: description,
+//       urgency: criticality === 'high' ? 5 : criticality === 'medium' ? 3 : 1, // Mapeia criticidade
+//       impact: criticality === 'high' ? 5 : criticality === 'medium' ? 3 : 1,
+//       priority: criticality === 'high' ? 5 : criticality === 'medium' ? 3 : 1,
+//       entities_id: 0, // Ajuste para a entidade desejada no GLPI
+//       type: 1, // 1 = Incidente, 2 = Requisição
+//     };
+//     const ticket = await apiClient.assistance.add('Ticket', ticketData, { sessionToken });
+//     //console.log('Resposta completa do GLPI:', JSON.stringify(ticket, null, 2));
+//     const ticketId = ticket.id || ticket.data?.id || ticket.input?.id; // Tenta diferentes propriedades
+//     if (!ticketId) {
+//       throw new Error('ID do ticket não encontrado na resposta do GLPI');
+//     }
+//     console.log('Ticket criado no GLPI:', ticketId);
+//     return ticketId;
+//   } catch (error) {
+//     console.error('Erro ao criar ticket no GLPI:', error);
+//     throw new Error(`Falha ao criar ticket: ${error.message}`);
+//   }
+// }
 
-export async function updateGlpiTicket(ticketId: number, updateData: { content: string }) {
-  try {
-    const sessionToken = await initGlpiSession();
-    const updatedTicket = await apiClient.updateItem('Ticket', ticketId, updateData, { sessionToken });
-    console.log('Ticket atualizado no GLPI:', ticketId);
-    return updatedTicket;
-  } catch (error) {
-    console.error('Erro ao atualizar ticket no GLPI:', error);
-    throw new Error(`Falha ao atualizar ticket: ${error.message}`);
-  }
-}
+// export async function updateGlpiTicket(ticketId: number, updateData: { content: string }) {
+//   try {
+//     const sessionToken = await initGlpiSession();
+//     const updatedTicket = await apiClient.updateItem('Ticket', ticketId, updateData, { sessionToken });
+//     console.log('Ticket atualizado no GLPI:', ticketId);
+//     return updatedTicket;
+//   } catch (error) {
+//     console.error('Erro ao atualizar ticket no GLPI:', error);
+//     throw new Error(`Falha ao atualizar ticket: ${error.message}`);
+//   }
+// }
 
 export { apiClient }; // Exporta o cliente para uso em outros módulos
