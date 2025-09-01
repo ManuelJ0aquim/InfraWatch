@@ -23,4 +23,8 @@ declare module "net-snmp" {
   ): any;
 
   export function isVarbindError(vb: VarBind): boolean;
+
+  export function varbindError(vb: any) {
+    throw new Error("Function not implemented.");
+  }
 }

@@ -1,5 +1,4 @@
 import { PrismaClient } from "@prisma/client";
-import { detectIssues } from "./worker2";
 import { getIO } from "../../socket";
 import { writeSlaRecordToInflux } from "../../Influxdb/WriteMetrics/WriteSlaRecord";
 import { writeServiceStatus } from "../../Influxdb/WriteMetrics/WriteServiceStatus";
@@ -29,29 +28,20 @@ async function notifyContacts(
   }
 }
 
-export async function processSlaAndAlerts(serviceId: string)
-{
+export async function processSlaAndAlerts(serviceId: string, issues: any[] = []) {
   const io = getIO();
-  const issues = await detectIssues(serviceId);
-
   const downNow = issues.length > 0;
 
-  if (downNow)
-  {
+  if (downNow) {
     for (const issue of issues) {
       await writeServiceStatus({
         serviceId: issue.serviceId,
         status: "DOWN",
       });
 
-      const policy = await NotificationPolicyRepo.getEffectivePolicy(
-        issue.serviceId,
-      );
+      const policy = await NotificationPolicyRepo.getEffectivePolicy(issue.serviceId);
 
-      const incident = await findOrOpenIncident(
-        issue.serviceId,
-        issue.description,
-      );
+      const incident = await findOrOpenIncident(issue.serviceId, issue.description);
 
       await writeSlaRecordToInflux({
         serviceId: issue.serviceId,
@@ -61,7 +51,6 @@ export async function processSlaAndAlerts(serviceId: string)
         status: false,
         criticality: issue.severity,
       });
-      
 
       const canNotify =
         !incident.lastNotificationAt ||
@@ -72,9 +61,7 @@ export async function processSlaAndAlerts(serviceId: string)
 
         await notifyContacts(
           issue.serviceId,
-          `ALERTA ${issue.severity.toUpperCase()}: ${issue.serviceName} - ${
-            issue.description
-          } (retry ${nextRetry}/${policy.maxRetries})`,
+          `ALERTA ${issue.severity.toUpperCase()}: ${issue.serviceName} - ${issue.description} (retry ${nextRetry}/${policy.maxRetries})`,
           policy.channels,
         );
 
@@ -88,9 +75,7 @@ export async function processSlaAndAlerts(serviceId: string)
         severity: issue.severity,
       });
     }
-  }
-  else
-  {
+  } else {
     await writeServiceStatus({ serviceId, status: "UP" });
 
     const policy = await NotificationPolicyRepo.getEffectivePolicy(serviceId);

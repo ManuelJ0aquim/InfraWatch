@@ -15,11 +15,13 @@ import { solicitarResetSenhaRoutes } from "../routes/Auth/SolicitarResetPassword
 import { notificationPolicyRoutes } from '../routes/APIs/notificationPolicy';
 import { incidentRoutes } from '../routes/APIs/IncidentsRoutes';
 import { slaRoutes } from "../routes/APIs/slaRoutes";
+import { proxyReceiverRoutes } from "../routes/APIs/proxyReceiverRoutes";
 
 export async function RegisterAllRoutes(app: FastifyInstance)
 {    
     app.register(prisma);
     app.register(jwtPlugin);
+    app.register(proxyReceiverRoutes);
     app.register(webhookReceiverRoutes);
     app.register(slaRoutes, { prefix: "/api" });
     app.register(servicesRoutes);

@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
+    "grpc": "ts-node ./src/Monitoring/Workers/grpcServer.ts",
     "clean": "rimraf dist",
     "build": "npm run clean && tsc",
     "start": "node dist/server.js",
@@ -24,6 +25,8 @@
   "dependencies": {
     "@atno/ts-glpi-client": "^0.1.0",
     "@fastify/static": "^8.2.0",
+    "@grpc/grpc-js": "^1.13.4",
+    "@grpc/proto-loader": "^0.8.0",
     "@influxdata/influxdb-client": "^1.35.0",
     "@prisma/client": "^6.13.0",
     "axios": "^1.11.0",

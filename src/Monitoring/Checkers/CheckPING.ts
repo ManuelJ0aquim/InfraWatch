@@ -32,14 +32,14 @@ export async function CheckPING(target: string, count: number = 4, timeout: numb
 
   return {
     target,
-    packets_transmitted: transmitted,    // alias
-    packets_received: received,          // alias
-    percent_packet_loss: loss,           // perda %
-    minimum_response_ms: min,            // alias compatível
+    packets_transmitted: transmitted,    
+    packets_received: received,          
+    percent_packet_loss: loss,           
+    minimum_response_ms: min,           
     maximum_response_ms: max,
     average_response_ms: avg,
     standard_deviation_ms: mdev,
-    ttl: null,                           // lib `ping` não retorna TTL
-    status: received > 0 ? 'UP' : 'DOWN' // status final
+    ttl: null,
+    status: received > 0 ? 'UP' : 'DOWN'
   };
 }

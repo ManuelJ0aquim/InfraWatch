@@ -12,34 +12,34 @@ model Service {
   id                 String               @id @default(uuid())
   name               String
   type               ServiceType
-  target             String               
-  snmpCommunity      String?             
+  target             String
+  snmpCommunity      String?
   snmpPort           Int?                 @default(161)
   ownerId            String
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
+  glpiId             String?              @unique
   AlertContact       AlertContact[]
   Incident           Incident[]
   NotificationPolicy NotificationPolicy[]
   User               User                 @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   SliTarget          SliTarget[]
-  glpiId             String?              @unique
 
   @@index([ownerId])
   @@index([type])
 }
 
 model User {
-  id                               String    @id @default(uuid())
-  name                             String
-  email                            String    @unique
-  password                         String
-  role                             Role      @default(USER)
-  createdAt                        DateTime  @default(now())
-  updatedAt                        DateTime  @updatedAt
-  passwordResetExpires             DateTime?
-  passwordResetToken               String?
-  Service                          Service[]
+  id                   String    @id @default(uuid())
+  name                 String
+  email                String    @unique
+  password             String
+  role                 Role      @default(USER)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  passwordResetExpires DateTime?
+  passwordResetToken   String?
+  Service              Service[]
 }
 
 model SliTarget {
@@ -76,10 +76,9 @@ model Incident {
   reason             String?
   retryCount         Int       @default(0)
   lastNotificationAt DateTime?
-  service            Service   @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-
   glpiTicketId       String?
   glpiTicketUrl      String?
+  service            Service   @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
   @@index([serviceId, openedAt])
   @@index([serviceId, closedAt])
