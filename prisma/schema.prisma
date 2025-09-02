@@ -13,14 +13,14 @@ model Service {
   name               String
   type               ServiceType
   target             String
+  snmpCommunity      String?
+  snmpPort           Int?                 @default(161)
   ownerId            String
-  criticality String   @default("medium")
-  status         String?
+  criticality   Criticality? @default(MEDIUM)
+  status             String?
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
   glpiId             String?              @unique
-  snmpCommunity      String?
-  snmpPort           Int?                 @default(161)
   AlertContact       AlertContact[]
   Incident           Incident[]
   NotificationPolicy NotificationPolicy[]
@@ -114,4 +114,11 @@ enum ServiceType {
   PING
   SNMP
   WEBHOOK
+}
+
+enum Criticality {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
 }

@@ -1,5 +1,5 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { ServiceType } from '@prisma/client';
+import { ServiceType, Criticality } from '@prisma/client';
 import { syncServiceToGLPI } from '../../Integrations/GLPI/syncServices';
 
 interface AddServiceRequest {
@@ -13,7 +13,7 @@ interface AddServiceRequest {
 // export async function addService(request: FastifyRequest, reply: FastifyReply)
 export async function addService(request: FastifyRequest<{ Body: AddServiceRequest }>, reply: FastifyReply)
 {
-  const { name, type, target, ownerId, criticality } = request.body as { name: string; type: ServiceType; target: string; ownerId: string; criticality: string; };
+  const { name, type, target, ownerId, criticality } = request.body;
 
   try
   {
@@ -30,11 +30,14 @@ export async function addService(request: FastifyRequest<{ Body: AddServiceReque
 
     // Validate criticality (if provided)
     const validCriticalities = ['low', 'medium', 'high', 'critical'];
+    let criticalityEnum: Criticality | undefined;
     if (criticality && !validCriticalities.includes(criticality)) {
       return reply.code(400).send({ message: 'Invalid criticality. Use: low, medium, high, critical' });
     }
+    // Mapear string para enum Criticality
+    criticalityEnum = criticality.toUpperCase() as Criticality;
     const service = await request.server.prisma.service.create({
-      data: { name, type, target, ownerId, criticality: criticality || 'medium', status: 'UNKNOWN', }
+      data: { name, type, target, ownerId, criticality: criticalityEnum || Criticality.MEDIUM, status: 'UNKNOWN', }
     });
 
     await createDefaultSLIsForService(service.id, type, request.server.prisma);
