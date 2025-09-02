@@ -8,12 +8,13 @@ interface AddServiceRequest {
   target: string;
   ownerId: string;
   criticality?: string;
+  status?: string;
 }
 
 // export async function addService(request: FastifyRequest, reply: FastifyReply)
 export async function addService(request: FastifyRequest<{ Body: AddServiceRequest }>, reply: FastifyReply)
 {
-  const { name, type, target, ownerId, criticality } = request.body;
+  const { name, type, target, ownerId, criticality, status } = request.body;
 
   try
   {
@@ -34,10 +35,20 @@ export async function addService(request: FastifyRequest<{ Body: AddServiceReque
     if (criticality && !validCriticalities.includes(criticality)) {
       return reply.code(400).send({ message: 'Invalid criticality. Use: low, medium, high, critical' });
     }
+
+    // Validar status
+    const validStatuses = ['UP', 'DOWN', 'UNKNOWN'];
+    let serviceStatus = status;
+    if (status && !validStatuses.includes(status)) {
+      return reply.code(400).send({ message: 'Invalid status. Use: UP, DOWN, UNKNOWN' });
+    }
+    if (!serviceStatus) {
+      serviceStatus = 'UNKNOWN'; // Padrão se status não for fornecido
+    }
     // Mapear string para enum Criticality
     criticalityEnum = criticality.toUpperCase() as Criticality;
     const service = await request.server.prisma.service.create({
-      data: { name, type, target, ownerId, criticality: criticalityEnum || Criticality.MEDIUM, status: 'UNKNOWN', }
+      data: { name, type, target, ownerId, criticality: criticalityEnum || Criticality.MEDIUM, status: serviceStatus, }
     });
 
     await createDefaultSLIsForService(service.id, type, request.server.prisma);
