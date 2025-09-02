@@ -15,6 +15,7 @@ model Service {
   target             String
   ownerId            String
   criticality String   @default("medium")
+  status         String?
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
   glpiId             String?              @unique

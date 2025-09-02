@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { addService } from '../../Controllers/APIs/addServices';
+import { syncServiceToGLPI } from '../../Integrations/GLPI/syncServices';
 
 export async function addServiceRoutes(fastify: FastifyInstance)
 {
@@ -15,6 +16,7 @@ export async function addServiceRoutes(fastify: FastifyInstance)
           type: { type: 'string', enum: ['HTTP', 'PING', 'SNMP', 'WEBHOOK'] },
           target: { type: 'string' },
           ownerId: { type: 'string' },
+          criticality: { type: 'string', enum: ['low', 'medium', 'high', 'critical'], default: 'medium' },
         }
       },
       response: {
@@ -26,9 +28,23 @@ export async function addServiceRoutes(fastify: FastifyInstance)
             type: { type: 'string' },
             target: { type: 'string' },
             ownerId: { type: 'string' },
+            criticality: { type: 'string' },
+            status: { type: 'string' },
             createdAt: { type: 'string' },
             updatedAt: { type: 'string' },
-          }
+          },
+          400: {
+            type: 'object',
+            properties: {
+              message: { type: 'string' },
+            },
+          },
+          500: {
+            type: 'object',
+            properties: {
+              message: { type: 'string' },
+            },
+          },
         }
       }
     }

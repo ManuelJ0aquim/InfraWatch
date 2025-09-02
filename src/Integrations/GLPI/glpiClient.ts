@@ -141,6 +141,7 @@ export async function syncGlpiInventory() {
       };
       const glpiAssetType = assetTypeMap[service.type] || 'Computer';
 
+      
       // Generate GLPI inventory JSON
       const inventoryJson = {
         //_tracking_inventory: 1,
@@ -163,7 +164,7 @@ export async function syncGlpiInventory() {
           networks: [
             {
               description: `Service Target: ${service.name}`,
-              ipaddress: metrics.ip || (service.target.includes('://') ? service.target.split('://')[1].split('/')[0] : service.target),
+              //ipaddress: metrics.ip || (service.target.includes('://') ? service.target.split('://')[1].split('/')[0] : service.target),
               mac: metrics.mac || '', // Add if available from metrics
             },
           ],

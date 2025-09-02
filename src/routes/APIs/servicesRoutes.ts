@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { getAllServices } from '../../Controllers/APIs/services';
+import { syncServiceToGLPI } from '../../Integrations/GLPI/syncServices';
 
 export async function servicesRoutes(fastify: FastifyInstance)
 {

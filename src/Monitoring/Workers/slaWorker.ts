@@ -48,7 +48,11 @@ export async function processSlaAndAlerts(serviceId: string)
 
       const policy = await NotificationPolicyRepo.getEffectivePolicy( issue.serviceId );
 
-      const incident = await findOrOpenIncident( issue.serviceId, issue.description );
+      const incident = await findOrOpenIncident(issue.serviceId);
+      if (!incident) {
+        console.error(`Falha ao criar ou obter incidente para serviço ${issue.serviceId}`);
+        continue; // Skip if incident creation failed
+      }
 
       await writeSlaRecordToInflux(
       {
@@ -85,9 +89,12 @@ export async function processSlaAndAlerts(serviceId: string)
       });
     }
 
+  }else
+  {
     await writeServiceStatus({ serviceId, status: "UP" });
-
+  
     const policy = await NotificationPolicyRepo.getEffectivePolicy(serviceId);
     await closeIncidentIfRecovered(serviceId, policy.recoveryConfirmations);
+
   }
 }
