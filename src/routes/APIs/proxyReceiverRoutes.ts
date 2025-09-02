@@ -11,8 +11,6 @@ export async function proxyReceiverRoutes(fastify: FastifyInstance)
 
       const issues = await processProxyData(data);
 
-      console.log("Issues:", issues);
-
       for (const issue of issues)
       {
         await processSlaAndAlerts(issue.serviceId);
