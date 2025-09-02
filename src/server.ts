@@ -64,6 +64,7 @@ import Fastify from 'fastify';
 import { initSocket } from './socket';
 import fastifySwagger from 'fastify-swagger';
 import { startMonitoring } from './Monitoring/Workers/worker';
+import localtunnel from 'localtunnel';
 import { RegisterAllRoutes } from './RegisterRoutes/RegisterRoutes';
 import cron from 'node-cron';
 import { syncGlpiInventory } from './Integrations/GLPI/glpiClient';
@@ -85,7 +86,6 @@ server.register(require('fastify-env'), {
   },
   dotenv: true,
 });
-
 server.register(fastifySwagger, {
   routePrefix: '/docs',
   swagger: {
@@ -94,7 +94,7 @@ server.register(fastifySwagger, {
       description: 'API do sistema InfraWatch',
       version: '0.1.0',
     },
-    host: 'localhost:3002',
+    host: `localhost:${3002}`,
     schemes: ['http'],
     consumes: ['application/json'],
     produces: ['application/json'],
@@ -129,6 +129,14 @@ const start = async () => {
     await server.listen(3002, '0.0.0.0');
     console.log('Servidor Fastify rodando em http://localhost:3002');
     console.log(`Documentação disponível em http://localhost:3002/docs`);
+    const tunnel = await localtunnel({ port: Number(3002), subdomain: 'infrawatch' });
+    
+    console.log(`Servidor Fastify exposto publicamente em ${tunnel.url}`);
+    console.log(`Documentação disponível em ${tunnel.url}/docs`);
+
+    tunnel.on('close', () => {
+      console.log('Túnel localtunnel encerrado.');
+    });
   } catch (err) {
     console.error(err);
     process.exit(1);

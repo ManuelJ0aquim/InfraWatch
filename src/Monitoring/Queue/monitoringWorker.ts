@@ -6,25 +6,23 @@ export const monitoringWorker = new Worker(
   'monitoring',
   async job => {
     const { serviceId } = job.data;
-
     const service = await prisma.service.findUnique(
     {
       where: { id: serviceId },
       select: { name: true },
     });
-
     await processSlaAndAlerts(serviceId);
-
     return { serviceName: service?.name ?? serviceId };
   },
-  { connection: redisConnection }
+  { connection: redisConnection, concurrency: 5 }
 );
 
-monitoringWorker.on('completed', (job, result) => {
+monitoringWorker.on('completed', (job, result) =>
+{
   console.log(`Job ${job.id} concluído para serviço ${result?.serviceName}`);
 });
 
-monitoringWorker.on('failed', (job, err) => {
-  console.error(`Job ${job?.id} falhou para serviço ${job?.data?.serviceId}:`, err?.message );
+monitoringWorker.on('failed', (job, err) =>
+{
+  console.error(`Job ${job?.id} falhou para serviço ${job?.data?.serviceId}:`, err?.message);
 });
-

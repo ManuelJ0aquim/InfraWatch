@@ -51,7 +51,6 @@ export async function CheckWebhook( url: string, payload: any = { ping: true }, 
       payloadSent: payload,
       responseBody: res.data.toString()
     };
-
   }
   catch (err: any)
   {
