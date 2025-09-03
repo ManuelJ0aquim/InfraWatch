@@ -10,7 +10,6 @@ import { serviceMetricsRoutes } from '../routes/APIs/serviceMetricsRoutes';
 import { resetarSenhaRoutes } from "../routes/Auth/ResetPasswordRoutes.js";
 import { addServiceRoutes } from "../routes/APIs/addServiceRoutes";
 import { alertContactRoutes } from '../routes/APIs/alertContactRoutes';
-import { webhookReceiverRoutes } from '../routes/APIs/webhookReceiver';
 import { solicitarResetSenhaRoutes } from "../routes/Auth/SolicitarResetPasswordRoutes.js";
 import { notificationPolicyRoutes } from '../routes/APIs/notificationPolicy';
 import { incidentRoutes } from '../routes/APIs/IncidentsRoutes';
@@ -22,7 +21,6 @@ export async function RegisterAllRoutes(app: FastifyInstance)
     app.register(prisma);
     app.register(jwtPlugin);
     app.register(proxyReceiverRoutes);
-    app.register(webhookReceiverRoutes);
     app.register(slaRoutes, { prefix: "/api" });
     app.register(servicesRoutes);
     app.register(alertContactRoutes);
