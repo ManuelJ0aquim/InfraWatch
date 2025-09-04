@@ -1,0 +1,11 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.queryApi = exports.writeApi = exports.influxDB = exports.org = void 0;
+const influxdb_client_1 = require("@influxdata/influxdb-client");
+const url = process.env.INFLUX_URL;
+const token = process.env.INFLUX_TOKEN;
+exports.org = process.env.INFLUX_ORG;
+const bucket = process.env.INFLUX_BUCKET;
+exports.influxDB = new influxdb_client_1.InfluxDB({ url, token });
+exports.writeApi = exports.influxDB.getWriteApi(exports.org, bucket, 'ms');
+exports.queryApi = exports.influxDB.getQueryApi(exports.org);
