@@ -22,24 +22,10 @@ model Service {
   AlertContact       AlertContact[]
   Incident           Incident[]
   NotificationPolicy NotificationPolicy[]
-  User               User                 @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   SliTarget          SliTarget[]
 
   @@index([ownerId])
   @@index([type])
-}
-
-model User {
-  id                   String    @id @default(uuid())
-  name                 String
-  email                String    @unique
-  password             String
-  role                 Role      @default(USER)
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
-  passwordResetExpires DateTime?
-  passwordResetToken   String?
-  Service              Service[]
 }
 
 model SliTarget {
