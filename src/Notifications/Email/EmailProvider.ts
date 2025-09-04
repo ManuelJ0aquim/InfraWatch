@@ -12,7 +12,6 @@ export class EmailProvider implements INotificationProvider {
     const pass = process.env.EMAIL_PASS;
 
     if (!user || !pass) {
-      // Deixa instanciado mas impedirá envio; validação adicional em runtime
       console.warn('[EmailProvider] Variáveis EMAIL_USER / EMAIL_PASS ausentes. Envios irão falhar.');
     }
 

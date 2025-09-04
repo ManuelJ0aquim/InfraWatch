@@ -36,7 +36,7 @@ export async function solicitarResetSenha(req: FastifyRequest, reply: FastifyRep
   if (usuario.email)
   {
     const emailProvider = new EmailProvider();
-    await emailProvider.sendNotification2(
+    await emailProvider.sendNotification(
       usuario.email,
       `${token}`
     );
