@@ -141,6 +141,20 @@ export async function syncGlpiInventory() {
       };
       const glpiAssetType = assetTypeMap[service.type] || 'Computer';
 
+      // Função para validar IPv4
+    const isIpAddress = (str: string) => {
+      const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
+      return ipRegex.test(str);
+    };
+
+    // Extrair possível IP de service.target
+    let ipAddress: string | undefined;
+    if (service.target) {
+      const target = service.target.includes('://') ? service.target.split('://')[1].split('/')[0] : service.target;
+      if (isIpAddress(target)) {
+        ipAddress = target;
+      }
+    }
       
       // Generate GLPI inventory JSON
       const inventoryJson = {
@@ -163,8 +177,8 @@ export async function syncGlpiInventory() {
           },
           networks: [
             {
-              description: `Service Target: ${service.name}`,
-              //ipaddress: metrics.ip || (service.target.includes('://') ? service.target.split('://')[1].split('/')[0] : service.target),
+              description: `${service.name}`,
+              ipaddress: ipAddress,
               mac: metrics.mac || '', // Add if available from metrics
             },
           ],
