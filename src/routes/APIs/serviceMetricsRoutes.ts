@@ -3,10 +3,9 @@ import { getSnmpMetrics, getHttpMetrics, getWebhookMetrics, getPingMetrics } fro
 
 export async function serviceMetricsRoutes(fastify: FastifyInstance)
 {
-  // SNMP
   fastify.get('/api/services/:id/metrics/snmp', {
     schema: {
-      description: 'Obter métricas SNMP do serviço pela última hora',
+      description: 'Obter métricas SNMP do serviço (última hora: system, interfaces, summary e sensores)',
       tags: ['Services'],
       params: {
         type: 'object',
@@ -17,14 +16,16 @@ export async function serviceMetricsRoutes(fastify: FastifyInstance)
   }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
-      return await getSnmpMetrics(id);
+
+      const metrics = await getSnmpMetrics(id);
+
+      return reply.send(metrics);
     } catch (error) {
       request.log.error(error);
-      reply.status(500).send({ error: 'Erro ao buscar métricas SNMP' });
+      return reply.status(500).send({ error: 'Erro ao buscar métricas SNMP' });
     }
   });
 
-  // HTTP
   fastify.get('/api/services/:id/metrics/http', {
     schema: {
       description: 'Obter métricas HTTP do serviço pela última hora',
@@ -45,7 +46,6 @@ export async function serviceMetricsRoutes(fastify: FastifyInstance)
     }
   });
 
-  // Webhook
   fastify.get('/api/services/:id/metrics/webhook', {
     schema: {
       description: 'Obter métricas Webhook do serviço pela última hora',
@@ -66,7 +66,6 @@ export async function serviceMetricsRoutes(fastify: FastifyInstance)
     }
   });
 
-  // Ping
   fastify.get('/api/services/:id/metrics/ping', {
     schema: {
       description: 'Obter métricas de PING do serviço pela última hora',
