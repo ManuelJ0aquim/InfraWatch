@@ -88,14 +88,8 @@ model NotificationPolicy {
   @@index([serviceId, active])
 }
 
-enum Role {
-  ADMIN
-  USER
-}
-
 enum ServiceType {
   HTTP
   PING
   SNMP
-  WEBHOOK
 }

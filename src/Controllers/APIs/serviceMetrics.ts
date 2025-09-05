@@ -122,7 +122,9 @@ export async function getWebhookMetrics(serviceId: string) {
       responseBody: row.responseBody || null,
     }));
     return formattedRows;
-  } catch (error) {
+  }
+  catch (error)
+  {
     throw error;
   }
 }

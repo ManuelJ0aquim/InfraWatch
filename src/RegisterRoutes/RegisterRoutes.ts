@@ -4,7 +4,6 @@ import { FastifyInstance } from "fastify";
 import { servicesRoutes } from '../routes/APIs/servicesRoutes';
 import { notificationRoutes } from '../routes/APIs/notificationRoutes';
 import { serviceMetricsRoutes } from '../routes/APIs/serviceMetricsRoutes';
-import { addServiceRoutes } from "../routes/APIs/addServiceRoutes";
 import { alertContactRoutes } from '../routes/APIs/alertContactRoutes';
 import { notificationPolicyRoutes } from '../routes/APIs/notificationPolicy';
 import { incidentRoutes } from '../routes/APIs/IncidentsRoutes';
@@ -21,7 +20,6 @@ export async function RegisterAllRoutes(app: FastifyInstance)
     app.register(alertContactRoutes);
     app.register(notificationRoutes);
     app.register(serviceMetricsRoutes);
-    app.register(addServiceRoutes);
     app.register(notificationPolicyRoutes);
     app.register(incidentRoutes, { prefix: '/api/incidents' });
 }

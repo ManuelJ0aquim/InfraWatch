@@ -5,7 +5,7 @@ import fastifySwagger from 'fastify-swagger';
 import { startMonitoring } from './Monitoring/Workers/worker';
 import { RegisterAllRoutes } from "./RegisterRoutes/RegisterRoutes";
 
-const PORT = Number(process.env.PORT1) || 3000;
+const PORT = Number(process.env.PORT) || 3000;
 const SUBDOMAIN = process.env.LOCALTUNNEL_SUBDOMAIN;
 
 const server = Fastify({ logger: false });

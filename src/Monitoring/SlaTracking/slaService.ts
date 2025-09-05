@@ -2,7 +2,6 @@ import { SlaCalculator, SlaResult } from "./slaCalculator";
 
 type Unit = "m" | "h" | "d" | "w" | "mo" | "y";
 
-// aplica subtrações de calendário (y/mo) e de tempo (w/d/h/m) em sequência
 function subtractComposite(now: Date, parts: Array<{ value: number; unit: Unit }>): Date {
   let t = new Date(now);
   for (const { value, unit } of parts) {
@@ -23,7 +22,6 @@ function parseCompositePeriodString(period: string): Array<{ value: number; unit
   if (typeof period !== "string" || !period.trim()) throw new Error("Período inválido: vazio.");
   const p = period.trim().toLowerCase();
 
-  // tokens válidos: 1m, 2h, 3d, 4w, 5mo, 1y — em qualquer ordem, repetidos
   const re = /(\d+)\s*(mo|y|w|d|h|m)\b/gi;
   const parts: Array<{ value: number; unit: Unit }> = [];
 
@@ -36,11 +34,9 @@ function parseCompositePeriodString(period: string): Array<{ value: number; unit
   }
 
   if (parts.length === 0) {
-    // compat: mensagens antigas
     throw new Error("Período inválido. Exemplos: 15m, 6h, 7d, 2mo, 1h30m, 2w3d, 1y2mo.");
   }
 
-  // validar que não sobraram caracteres não reconhecidos
   const cleaned = p.replace(re, "").trim();
   if (cleaned.length > 0) {
     throw new Error(`Período inválido: token não reconhecido perto de "${cleaned}".`);

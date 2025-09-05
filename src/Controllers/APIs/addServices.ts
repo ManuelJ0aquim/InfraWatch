@@ -13,8 +13,6 @@ export async function addService(request: any, reply: FastifyReply)
     data: { name, type, target, ownerId }
   });
 
-  console.log(service)
-
   await createDefaultSLIsForService(service.id, type, request.server.prisma);
 
   return reply.code(201).send(service);
@@ -41,16 +39,6 @@ async function createDefaultSLIsForService(serviceId: string, type: ServiceType,
       {
         serviceId,
         metric: 'HTTP',
-        threshold: 98,
-        comparison: 'gte',
-      });
-      break;
-
-    case ServiceType.WEBHOOK:
-      defaultSLIs.push(
-      {
-        serviceId,
-        metric: 'WEBHOOK',
         threshold: 98,
         comparison: 'gte',
       });

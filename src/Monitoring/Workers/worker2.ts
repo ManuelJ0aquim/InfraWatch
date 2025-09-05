@@ -37,9 +37,7 @@ export async function processProxyData(data: any): Promise<Problem[]>
       await writeSnmpMetrics(data.serviceId, data);
       const snmpAnalysis = await analyzeSnmpIssue({ id: data.serviceId, name: data.target }, data);
       if (snmpAnalysis)
-      {
         problems.push(snmpAnalysis);
-      }
       break;
       
       case "PING":
@@ -57,6 +55,7 @@ export async function processProxyData(data: any): Promise<Problem[]>
       if (httpAnalysis)
         problems.push(httpAnalysis);
       break;
+    
     default:
       problems.push({
         serviceId: data.serviceId,
