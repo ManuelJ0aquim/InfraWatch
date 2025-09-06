@@ -3,3 +3,5 @@ node_modules
 
 # Apenas para desenvolvimento, nao sou ingenuo ne!
 # .env 
+
+./dist

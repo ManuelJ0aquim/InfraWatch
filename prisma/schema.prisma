@@ -16,32 +16,16 @@ model Service {
   snmpCommunity      String?
   snmpPort           Int?                 @default(161)
   ownerId            String
-  criticality   Criticality? @default(MEDIUM)
-  status             String?
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
   glpiId             String?              @unique
   AlertContact       AlertContact[]
   Incident           Incident[]
   NotificationPolicy NotificationPolicy[]
-  User               User                 @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   SliTarget          SliTarget[]
 
   @@index([ownerId])
   @@index([type])
-}
-
-model User {
-  id                   String    @id @default(uuid())
-  name                 String
-  email                String    @unique
-  password             String
-  role                 Role      @default(USER)
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
-  passwordResetExpires DateTime?
-  passwordResetToken   String?
-  Service              Service[]
 }
 
 model SliTarget {
@@ -104,21 +88,8 @@ model NotificationPolicy {
   @@index([serviceId, active])
 }
 
-enum Role {
-  ADMIN
-  USER
-}
-
 enum ServiceType {
   HTTP
   PING
   SNMP
-  WEBHOOK
-}
-
-enum Criticality {
-  LOW
-  MEDIUM
-  HIGH
-  CRITICAL
 }

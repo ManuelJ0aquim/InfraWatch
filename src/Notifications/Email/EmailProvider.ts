@@ -1,89 +1,55 @@
+/// <reference types="node" />
 import nodemailer from 'nodemailer';
-import { INotificationProvider } from '../INotificationProvider';
+import { INotificationProvider, NotificationOptions } from '../INotificationProvider';
+import { buildAlertEmailHtml } from '../HTML/alertTemplate';
+import { buildResetCodeEmailHtml } from '../HTML/resetCodeTemplate';
 
 export class EmailProvider implements INotificationProvider {
   private transporter;
 
   constructor() {
+    const user = process.env.EMAIL_USER;
+    const pass = process.env.EMAIL_PASS;
+
+    if (!user || !pass) {
+      console.warn('[EmailProvider] Variáveis EMAIL_USER / EMAIL_PASS ausentes. Envios irão falhar.');
+    }
+
     this.transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
+      service: process.env.EMAIL_SERVICE || 'gmail',
+      host: process.env.EMAIL_HOST,
+      port: process.env.EMAIL_PORT ? Number(process.env.EMAIL_PORT) : undefined,
+      secure: process.env.EMAIL_SECURE === 'true',
+      auth: user && pass ? { user, pass } : undefined,
     });
   }
 
-  async sendNotification(to: string, message: string): Promise<void> {
-    const htmlContent = `
-      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
-        <div style="background-color: #0056b3; padding: 20px; text-align: center;">
-          <img src="https://cdn-icons-png.flaticon.com/512/565/565547.png" alt="InfraWatch Logo" width="60" style="display: block; margin: 0 auto 10px auto;" />
-          <h1 style="color: white; margin: 0; font-size: 24px;">InfraWatch</h1>
-        </div>
-  
-        <div style="padding: 20px; color: #333;">
-          <h2 style="color: #0056b3;">🚨 Alerta Importante</h2>
-          <p style="font-size: 16px; line-height: 1.5;">
-            ${message}
-          </p>
-  
-          <a href="#" style="display: inline-block; margin-top: 20px; padding: 12px 24px; background-color: #0056b3; color: white; text-decoration: none; border-radius: 5px; font-weight: 600;">
-            Ver detalhes
-          </a>
-        </div>
-  
-        <div style="background-color: #f5f5f5; padding: 15px; font-size: 12px; color: #777; text-align: center;">
-          <p>Este é um alerta automático enviado pelo sistema InfraWatch. Por favor, não responda este e-mail.</p>
-        </div>
-      </div>
-    `;
-  
-    await this.transporter.sendMail({
-      from: process.env.EMAIL_USER,
+  async sendNotification(to: string, message: string, options?: NotificationOptions): Promise<string | undefined> {
+    if (!to || !/\S+@\S+\.\S+/.test(to)) {
+      throw new Error('Email inválido');
+    }
+    if (!this.transporter) {
+      throw new Error('Transporter de email não inicializado');
+    }
+
+    const templateType = options?.metadata?.templateType || 'alert';
+    const subject = templateType === 'reset-code'
+      ? 'InfraWatch - Código de Redefinição de Senha'
+      : (options?.metadata?.subject || 'InfraWatch - Alerta');
+
+    const html = templateType === 'reset-code'
+      ? buildResetCodeEmailHtml(message)
+      : buildAlertEmailHtml(message);
+
+    const info = await this.transporter.sendMail({
+      from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
       to,
-      subject: 'InfraWatch - Alerta',
+      subject,
       text: message,
-      html: htmlContent,
+      html,
     });
+    return info?.messageId;
   }
 
-  async sendNotification2(to: string, code: string): Promise<void>
-  {
-      const htmlContent = `
-      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
-        <div style="background-color: #0056b3; padding: 20px; text-align: center;">
-          <img src="https://cdn-icons-png.flaticon.com/512/565/565547.png" alt="InfraWatch Logo" width="60" style="display: block; margin: 0 auto 10px auto;" />
-          <h1 style="color: white; margin: 0; font-size: 24px;">InfraWatch</h1>
-        </div>
-
-        <div style="padding: 20px; color: #333;">
-          <h2 style="color: #0056b3;">🔒 Código de Redefinição de Senha</h2>
-          <p style="font-size: 16px; line-height: 1.5;">
-            Você solicitou a redefinição de senha. Use o código abaixo para continuar:
-          </p>
-          <p style="font-size: 24px; font-weight: bold; color: #e63946; text-align: center; margin: 20px 0;">
-            ${code}
-          </p>
-          <p style="font-size: 14px; color: #555;">
-            Este código é válido por 15 minutos. Se você não solicitou essa alteração, ignore este e-mail.
-          </p>
-        </div>
-
-        <div style="background-color: #f5f5f5; padding: 15px; font-size: 12px; color: #777; text-align: center;">
-          <p>Este é um e-mail automático enviado pelo sistema InfraWatch. Por favor, não responda este e-mail.</p>
-        </div>
-      </div>
-    `;
-
-    await this.transporter.sendMail(
-    {
-      from: process.env.EMAIL_USER,
-      to,
-      subject: 'InfraWatch - Código de Redefinição de Senha',
-      text: `Seu código de redefinição de senha é: ${code}`,
-      html: htmlContent,
-    });
-  }
   
 }

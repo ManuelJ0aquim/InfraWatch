@@ -44,7 +44,7 @@ export async function processSlaAndAlerts(serviceId: string, issues: any[] = [])
       const incident = await findOrOpenIncident(issue.serviceId);
       if (!incident) {
         console.error(`Falha ao criar ou obter incidente para serviço ${issue.serviceId}`);
-        continue; // Skip if incident creation failed
+        continue;
       }
 
       await writeSlaRecordToInflux({

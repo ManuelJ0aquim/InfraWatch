@@ -1,4 +1,3 @@
-// src/routes/APIs/slaRoutes.ts
 import { FastifyInstance } from "fastify";
 import { SlaService } from "../../Monitoring/SlaTracking/slaService";
 import { SlaReportGenerator } from "../../Monitoring/SlaTracking/slaReportGenerator";

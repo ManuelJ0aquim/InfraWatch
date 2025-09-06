@@ -1,4 +1,5 @@
 import { Problem } from "../types/Problem";
+import { redis } from "./redis";
 
 export interface SnmpResult {
   sysName?: string;
@@ -21,10 +22,10 @@ export interface SnmpResult {
   }>;
 }
 
-export function analyzeSnmpIssue(
+export async function analyzeSnmpIssue(
   service: { id: string; name: string },
   result: SnmpResult | null
-): Problem | null {
+): Promise<Problem | null> {
   const timestamp = new Date().toISOString();
 
   if (!result) {
@@ -85,7 +86,8 @@ export function analyzeSnmpIssue(
       severity: "WARNING",
       priority: 3,
       description: `Dispositivo SNMP foi reiniciado recentemente (uptime: ${result.uptime}s).`,
-      recommendation: "Verifique logs do dispositivo para entender causa do reboot.",
+      recommendation:
+        "Verifique logs do dispositivo para entender causa do reboot.",
       timestamp,
     };
   }
@@ -115,34 +117,54 @@ export function analyzeSnmpIssue(
       severity: "HIGH",
       priority: 2,
       description: `Memória livre baixa: ${result.memFree} MB.`,
-      recommendation: "Considere aumentar a memória ou reduzir a carga no dispositivo.",
+      recommendation:
+        "Considere aumentar a memória ou reduzir a carga no dispositivo.",
       timestamp,
     };
   }
 
   if (result.interfaces) {
-    const downInterfaces = result.interfaces.filter((iface) => {
-      if (iface.operStatus !== "down") return false;
-      if (!iface.ip) return false;
+    for (const iface of result.interfaces) {
+      if (!iface.ip) continue;
+      if (["Vlan", "Loopback", "Test", "Dummy"].some((p) => iface.name.startsWith(p))) {
+        continue;
+      }
 
-      const ignorePrefixes = ["Vlan", "Loopback", "Test", "Dummy"];
-      return !ignorePrefixes.some((prefix) => iface.name.startsWith(prefix));
-    });
+      const key = `interfaceStatus:${service.id}:${iface.name}`;
+      const prevStatus = await redis.get(key);
+      const currentStatus = iface.operStatus;
 
-    if (downInterfaces.length > 0) {
-      const downInterfaceNames = downInterfaces.map((i) => i.name).join(", ");
-      return {
-        serviceId: service.id,
-        serviceName: service.name,
-        metric: "SNMP",
-        value: 0,
-        status: "DOWN",
-        severity: "CRITICAL",
-        priority: 1,
-        description: `Interfaces de rede estão DOWN: ${downInterfaceNames}.`,
-        recommendation: "Verifique o cabeamento e a configuração da interface.",
-        timestamp,
-      };
+      if (prevStatus !== currentStatus) {
+        await redis.set(key, currentStatus, "EX", 60 * 60 * 24);
+
+        if (currentStatus === "down") {
+          return {
+            serviceId: service.id,
+            serviceName: service.name,
+            metric: "SNMP",
+            value: 0,
+            status: "DOWN",
+            severity: "CRITICAL",
+            priority: 1,
+            description: `Interface ${iface.name} caiu (estava UP antes).`,
+            recommendation: "Verifique cabeamento ou configuração.",
+            timestamp,
+          };
+        } else if (currentStatus === "up" && prevStatus === "down") {
+          return {
+            serviceId: service.id,
+            serviceName: service.name,
+            metric: "SNMP",
+            value: 1,
+            status: "UP",
+            severity: "INFO",
+            priority: 4,
+            description: `Interface ${iface.name} voltou para UP.`,
+            recommendation: "Normalizado.",
+            timestamp,
+          };
+        }
+      }
     }
   }
 
