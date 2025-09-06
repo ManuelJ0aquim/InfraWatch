@@ -1,4 +1,5 @@
 import { queryApi } from '../../Influxdb/influxdb';
+
 interface MetricRow {
   _time: string;
   [key: string]: any;
@@ -12,14 +13,19 @@ export async function queryMetrics(
     from(bucket: "${process.env.INFLUX_BUCKET}")
       |> range(start: -1m)
       |> filter(fn: (r) => r._measurement == "${measurement}" and r.serviceId == "${serviceId}")
+      |> last()
       |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
-      |> sort(columns: ["_time"])
   `;
+
+  console.log("[queryMetrics] Measurement:", measurement, "Service:", serviceId);
+console.log("[queryMetrics] Query:", query);
+
 
   try {
     const rows = await queryApi.collectRows<MetricRow>(query);
     return rows;
   } catch (error: any) {
+    console.log(error.message)
     throw new Error(`Erro na consulta InfluxDB: ${error.message}`);
   }
 }
@@ -27,31 +33,25 @@ export async function queryMetrics(
 export async function getPingMetrics(serviceId: string) {
   try {
     const rows = await queryMetrics(serviceId, 'ping_metrics');
+    const row = rows[0];
+    if (!row) return null;
 
-    return rows.map((row) => {
-      const transmitted = row.packets_transmitted || 0;
-      const received = row.packets_received || 0;
-      const loss = row.percent_packet_loss || 0;
-      const min = row.minimum_response_ms || 0;
-      const max = row.maximum_response_ms || 0;
-      const avg = row.average_response_ms || 0;
-      const mdev = row.standard_deviation_ms || 0;
-      const status = row.status || (received > 0 ? 'UP' : 'DOWN');
+    const transmitted = row.packets_transmitted || 0;
+    const received = row.packets_received || 0;
 
-      return {
-        time: row._time,
-        serviceId,
-        packets_transmitted: transmitted,
-        packets_received: received,
-        percent_packet_loss: loss,
-        minimum_response_ms: min,
-        maximum_response_ms: max,
-        average_response_ms: avg,
-        standard_deviation_ms: mdev,
-        ttl: row.ttl || null,
-        status,
-      };
-    });
+    return {
+      time: row._time,
+      serviceId,
+      packets_transmitted: transmitted,
+      packets_received: received,
+      percent_packet_loss: row.percent_packet_loss || 0,
+      minimum_response_ms: row.minimum_response_ms || 0,
+      maximum_response_ms: row.maximum_response_ms || 0,
+      average_response_ms: row.average_response_ms || 0,
+      standard_deviation_ms: row.standard_deviation_ms || 0,
+      ttl: row.ttl || null,
+      status: row.status || (received > 0 ? 'UP' : 'DOWN'),
+    };
   } catch (error) {
     throw error;
   }
@@ -60,17 +60,19 @@ export async function getPingMetrics(serviceId: string) {
 export async function getSnmpMetrics(serviceId: string) {
   try {
     const systemRows = await queryMetrics(serviceId, "snmp_system");
-    const system = systemRows.map((row) => ({
-      time: row._time,
-      sysName: row.sysName || "unknown",
-      sysDescr: row.sysDescr || "N/A",
-      sysUpTime: row.sysUpTime || "N/A",
-      cpuLoad5sec: row.cpuLoad5sec || 0,
-      cpuLoad5min: row.cpuLoad5min || 0,
-      memFreeBytes: row.memFreeBytes || 0,
-      memTotalBytes: row.memTotalBytes || 0,
-      memUsedPercent: row.memUsedPercent || 0,
-    }));
+    const system = systemRows[0]
+      ? {
+          time: systemRows[0]._time,
+          sysName: systemRows[0].sysName || "unknown",
+          sysDescr: systemRows[0].sysDescr || "N/A",
+          sysUpTime: systemRows[0].sysUpTime || "N/A",
+          cpuLoad5sec: systemRows[0].cpuLoad5sec || 0,
+          cpuLoad5min: systemRows[0].cpuLoad5min || 0,
+          memFreeBytes: systemRows[0].memFreeBytes || 0,
+          memTotalBytes: systemRows[0].memTotalBytes || 0,
+          memUsedPercent: systemRows[0].memUsedPercent || 0,
+        }
+      : null;
 
     const ifaceRows = await queryMetrics(serviceId, "snmp_interface");
     const interfaces = ifaceRows.map((row) => ({
@@ -90,18 +92,19 @@ export async function getSnmpMetrics(serviceId: string) {
     }));
 
     const summaryRows = await queryMetrics(serviceId, "snmp_summary");
-    const summary = summaryRows.map((row) => ({
-      time: row._time,
-      totalInterfaces: row.totalInterfaces || 0,
-      interfacesUp: row.interfacesUp || 0,
-      interfacesDown: row.interfacesDown || 0,
-      totalInBytes: row.totalInBytes || 0,
-      totalOutBytes: row.totalOutBytes || 0,
-      totalErrors: row.totalErrors || 0,
-    }));
+    const summary = summaryRows[0]
+      ? {
+          time: summaryRows[0]._time,
+          totalInterfaces: summaryRows[0].totalInterfaces || 0,
+          interfacesUp: summaryRows[0].interfacesUp || 0,
+          interfacesDown: summaryRows[0].interfacesDown || 0,
+          totalInBytes: summaryRows[0].totalInBytes || 0,
+          totalOutBytes: summaryRows[0].totalOutBytes || 0,
+          totalErrors: summaryRows[0].totalErrors || 0,
+        }
+      : null;
 
     const sensorRows = await queryMetrics(serviceId, "snmp_sensor");
-
     const sensors = {
       temperature: [] as { time: string; index: string; value: number }[],
       fanStatus: [] as { time: string; index: string; status: string }[],
@@ -151,8 +154,10 @@ export async function getSnmpMetrics(serviceId: string) {
 export async function getHttpMetrics(serviceId: string) {
   try {
     const rows = await queryMetrics(serviceId, 'http_metrics');
+    const row = rows[0];
+    if (!row) return null;
 
-    return rows.map((row) => ({
+    return {
       time: row._time,
       status: row.status || 'unknown',
       httpStatus: row.httpStatus || 0,
@@ -166,7 +171,7 @@ export async function getHttpMetrics(serviceId: string) {
             ? JSON.parse(row.headers)
             : row.headers)
         : {},
-    }));
+    };
   } catch (error: any) {
     throw new Error(`Erro ao buscar métricas HTTP: ${error.message}`);
   }
@@ -175,8 +180,10 @@ export async function getHttpMetrics(serviceId: string) {
 export async function getWebhookMetrics(serviceId: string) {
   try {
     const rows = await queryMetrics(serviceId, 'webhook_metrics');
+    const row = rows[0];
+    if (!row) return null;
 
-    return rows.map((row) => ({
+    return {
       time: row._time,
       status: row.status || 'unknown',
       httpStatus: row.httpStatus || 0,
@@ -188,7 +195,7 @@ export async function getWebhookMetrics(serviceId: string) {
       headers: row.headers || {},
       payloadSent: row.payloadSent || null,
       responseBody: row.responseBody || null,
-    }));
+    };
   } catch (error) {
     throw error;
   }
