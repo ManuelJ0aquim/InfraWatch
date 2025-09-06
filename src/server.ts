@@ -14,7 +14,7 @@ server.register(fastifySwagger, {
   routePrefix: '/docs',
   swagger: {
     info: { title: 'InfraWatch API', description: 'API do InfraWatch', version: '0.1.0' },
-    host: `localhost:${PORT}`,
+    host: `${process.env.URL_PRODUCTION ? process.env.URL_PRODUCTION : "localhost"}:${PORT}`,
     schemes: ['http'],
     consumes: ['application/json'],
     produces: ['application/json'],
