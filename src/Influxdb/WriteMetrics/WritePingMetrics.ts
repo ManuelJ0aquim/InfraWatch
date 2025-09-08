@@ -6,6 +6,8 @@ export function writePingMetrics(serviceId: string, metrics: any)
   const point = new Point('ping_metrics')
     .tag('serviceId', serviceId)
 
+    .tag('serviceName', metrics.serviceName)
+
     .floatField('percent_packet_loss', metrics.percent_packet_loss)
 
     .floatField('minimum_response_ms', metrics.minimum_response_ms)

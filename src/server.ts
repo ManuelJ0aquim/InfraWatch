@@ -1,14 +1,21 @@
-import Fastify from 'fastify';
+import Fastify from "fastify";
+import fastifyCors from "fastify-cors";
 import localtunnel from 'localtunnel';
 import { initSocket } from './socket';
 import fastifySwagger from 'fastify-swagger';
 import { startMonitoring } from './Monitoring/Workers/worker';
 import { RegisterAllRoutes } from "./RegisterRoutes/RegisterRoutes";
 
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = Number(process.env.PORT) || 300;
 const SUBDOMAIN = process.env.LOCALTUNNEL_SUBDOMAIN;
 
 const server = Fastify({ logger: false });
+
+server.register(fastifyCors, {
+  origin: "http://localhost:3000",
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true
+});
 
 server.register(fastifySwagger, {
   routePrefix: '/docs',

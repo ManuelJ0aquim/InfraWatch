@@ -4,6 +4,7 @@ import { writeApi } from "../influxdb";
 export async function writeSnmpMetrics(serviceId: string, data: any) {
   const points: Point[] = [];
 
+  // === SNMP System ===
   const systemPoint = new Point("snmp_system")
     .tag("serviceId", serviceId)
     .tag("ip", data.ip)
@@ -11,47 +12,34 @@ export async function writeSnmpMetrics(serviceId: string, data: any) {
     .stringField("sysDescr", data.metrics.sysDescr || "N/A")
     .stringField("sysUpTime", data.metrics.sysUpTime || "N/A");
 
-  if (data.metrics.cpuLoad5min && data.metrics.cpuLoad5min !== "N/A") {
-    const cpuValue = parseFloat(data.metrics.cpuLoad5min);
-    if (!isNaN(cpuValue)) {
-      systemPoint.floatField("cpuLoad5min", cpuValue);
+  // CPU load
+  ["cpuLoad5sec", "cpuLoad1min", "cpuLoad5min"].forEach((key) => {
+    const value = data.metrics[key];
+    if (value != null && !isNaN(Number(value))) {
+      systemPoint.floatField(key, Number(value));
     }
-  }
+  });
 
-  if (data.metrics.memFree && data.metrics.memFree !== "N/A") {
-    systemPoint.stringField("memFree", data.metrics.memFree);
-    const memFreeMatch = data.metrics.memFree.match(/^([\d.]+)\s*(\w+)/);
-    if (memFreeMatch) {
-      const value = parseFloat(memFreeMatch[1]);
-      const unit = memFreeMatch[2];
-      const bytesValue = convertToBytes(value, unit);
-      if (bytesValue !== null) {
-        systemPoint.intField("memFreeBytes", bytesValue);
-      }
-    }
+  // Memória
+  if (data.metrics.memFree != null && !isNaN(Number(data.metrics.memFree))) {
+    const memFreeValue = Number(data.metrics.memFree);
+    systemPoint.intField("memFreeBytes", memFreeValue);
   }
+  if (data.metrics.memTotal != null && !isNaN(Number(data.metrics.memTotal))) {
+    const memTotalValue = Number(data.metrics.memTotal);
+    systemPoint.intField("memTotalBytes", memTotalValue);
 
-  if (data.metrics.memTotal && data.metrics.memTotal !== "N/A") {
-    systemPoint.stringField("memTotal", data.metrics.memTotal);
-    const memTotalMatch = data.metrics.memTotal.match(/^([\d.]+)\s*(\w+)/);
-    if (memTotalMatch) {
-      const value = parseFloat(memTotalMatch[1]);
-      const unit = memTotalMatch[2];
-      const bytesValue = convertToBytes(value, unit);
-      if (bytesValue !== null) {
-        systemPoint.intField("memTotalBytes", bytesValue);
-        const memFreeBytes = systemPoint.fields["memFreeBytes"];
-        if (memFreeBytes && typeof memFreeBytes === "number") {
-          const usedPercent = ((bytesValue - memFreeBytes) / bytesValue) * 100;
-          systemPoint.floatField("memUsedPercent", usedPercent);
-        }
-      }
+    const memFreeBytes = systemPoint.fields["memFreeBytes"];
+    if (memFreeBytes && typeof memFreeBytes === "number") {
+      const usedPercent = ((memTotalValue - memFreeBytes) / memTotalValue) * 100;
+      systemPoint.floatField("memUsedPercent", usedPercent);
     }
   }
 
   systemPoint.timestamp(new Date(data.timestamp));
   points.push(systemPoint);
 
+  // === Interfaces ===
   if (data.interfaces && Array.isArray(data.interfaces)) {
     for (const iface of data.interfaces) {
       const ifacePoint = new Point("snmp_interface")
@@ -64,50 +52,27 @@ export async function writeSnmpMetrics(serviceId: string, data: any) {
         .tag("adminStatus", iface.adminStatus || "unknown")
         .tag("operStatus", iface.operStatus || "unknown");
 
-      if (iface.mac && iface.mac !== "N/A") {
-        ifacePoint.stringField("mac", iface.mac);
+      if (iface.mac) ifacePoint.stringField("mac", iface.mac);
+      if (iface.ip) ifacePoint.stringField("ipAddress", iface.ip);
+
+      if (iface.speed != null && !isNaN(Number(iface.speed))) {
+        ifacePoint.intField("speedBps", Number(iface.speed));
       }
 
-      if (iface.ip) {
-        ifacePoint.stringField("ipAddress", iface.ip);
+      if (iface.inOctets != null && !isNaN(Number(iface.inOctets))) {
+        ifacePoint.intField("inBytes", Number(iface.inOctets));
       }
 
-      if (iface.speed && iface.speed !== "N/A") {
-        ifacePoint.stringField("speed", iface.speed);
-        const speedBps = parseSpeed(iface.speed);
-        if (speedBps !== null) {
-          ifacePoint.intField("speedBps", speedBps);
-        }
+      if (iface.outOctets != null && !isNaN(Number(iface.outOctets))) {
+        ifacePoint.intField("outBytes", Number(iface.outOctets));
       }
 
-      if (iface.inOctets && iface.inOctets !== "N/A") {
-        ifacePoint.stringField("inOctets", iface.inOctets);
-        const inBytes = parseBytes(iface.inOctets);
-        if (inBytes !== null) {
-          ifacePoint.intField("inBytes", inBytes);
-        }
+      if (iface.inErrors != null && !isNaN(Number(iface.inErrors))) {
+        ifacePoint.intField("inErrors", Number(iface.inErrors));
       }
 
-      if (iface.outOctets && iface.outOctets !== "N/A") {
-        ifacePoint.stringField("outOctets", iface.outOctets);
-        const outBytes = parseBytes(iface.outOctets);
-        if (outBytes !== null) {
-          ifacePoint.intField("outBytes", outBytes);
-        }
-      }
-
-      if (iface.inErrors && iface.inErrors !== "N/A") {
-        const inErrors = parseInt(iface.inErrors);
-        if (!isNaN(inErrors)) {
-          ifacePoint.intField("inErrors", inErrors);
-        }
-      }
-
-      if (iface.outErrors && iface.outErrors !== "N/A") {
-        const outErrors = parseInt(iface.outErrors);
-        if (!isNaN(outErrors)) {
-          ifacePoint.intField("outErrors", outErrors);
-        }
+      if (iface.outErrors != null && !isNaN(Number(iface.outErrors))) {
+        ifacePoint.intField("outErrors", Number(iface.outErrors));
       }
 
       ifacePoint.timestamp(new Date(data.timestamp));
@@ -115,6 +80,7 @@ export async function writeSnmpMetrics(serviceId: string, data: any) {
     }
   }
 
+  // === Summary ===
   const summaryPoint = new Point("snmp_summary")
     .tag("serviceId", serviceId)
     .tag("ip", data.ip)
@@ -137,18 +103,10 @@ export async function writeSnmpMetrics(serviceId: string, data: any) {
 
     for (const iface of data.interfaces) {
       if (iface.operStatus === "up") {
-        const inBytes = parseBytes(iface.inOctets);
-        const outBytes = parseBytes(iface.outOctets);
-
-        if (inBytes !== null) totalInBytes += inBytes;
-        if (outBytes !== null) totalOutBytes += outBytes;
-
-        if (iface.inErrors && iface.inErrors !== "N/A") {
-          totalErrors += parseInt(iface.inErrors) || 0;
-        }
-        if (iface.outErrors && iface.outErrors !== "N/A") {
-          totalErrors += parseInt(iface.outErrors) || 0;
-        }
+        if (iface.inOctets != null) totalInBytes += Number(iface.inOctets);
+        if (iface.outOctets != null) totalOutBytes += Number(iface.outOctets);
+        if (iface.inErrors != null) totalErrors += Number(iface.inErrors) || 0;
+        if (iface.outErrors != null) totalErrors += Number(iface.outErrors) || 0;
       }
     }
 
@@ -160,6 +118,7 @@ export async function writeSnmpMetrics(serviceId: string, data: any) {
 
   points.push(summaryPoint);
 
+  // === Sensores ===
   if (Array.isArray(data.metrics.temperature)) {
     data.metrics.temperature.forEach((temp: string, idx: number) => {
       const value = parseFloat(temp);
@@ -227,64 +186,14 @@ export async function writeSnmpMetrics(serviceId: string, data: any) {
     });
   }
 
+  // === Write all points ===
   for (const point of points) {
-    writeApi.writePoint(point);
-  }
-  await writeApi.flush();
-}
-
-function convertToBytes(value: number, unit: string): number | null {
-  const units: Record<string, number> = {
-    B: 1,
-    KB: 1024,
-    MB: 1024 * 1024,
-    GB: 1024 * 1024 * 1024,
-    TB: 1024 * 1024 * 1024 * 1024,
-  };
-
-  const multiplier = units[unit.toUpperCase()];
-  if (multiplier) {
-    return Math.round(value * multiplier);
-  }
-  return null;
-}
-
-function parseBytes(bytesStr: string): number | null {
-  if (!bytesStr || bytesStr === "N/A") return null;
-
-  const directParse = parseInt(bytesStr);
-  if (!isNaN(directParse)) return directParse;
-
-  const match = bytesStr.match(/^([\d.]+)\s*(\w+)/);
-  if (match) {
-    const value = parseFloat(match[1]);
-    const unit = match[2];
-    return convertToBytes(value, unit);
-  }
-  return null;
-}
-
-function parseSpeed(speedStr: string): number | null {
-  if (!speedStr || speedStr === "N/A") return null;
-
-  const directParse = parseInt(speedStr);
-  if (!isNaN(directParse)) return directParse;
-
-  const match = speedStr.match(/^([\d.]+)\s*(\w+)/);
-  if (match) {
-    const value = parseFloat(match[1]);
-    const unit = match[2].toLowerCase();
-
-    const multipliers: Record<string, number> = {
-      bps: 1,
-      kbps: 1000,
-      mbps: 1000000,
-      gbps: 1000000000,
-    };
-    const multiplier = multipliers[unit];
-    if (multiplier) {
-      return Math.round(value * multiplier);
+    if (Object.keys(point.fields).length > 0) {
+      writeApi.writePoint(point);
+    } else {
+      console.log("Point ignorado por não ter fields:", point.toLineProtocol());
     }
   }
-  return null;
+
+  await writeApi.flush();
 }

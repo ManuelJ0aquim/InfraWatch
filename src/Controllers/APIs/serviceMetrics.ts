@@ -17,9 +17,6 @@ export async function queryMetrics(
       |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
   `;
 
-  console.log("[queryMetrics] Measurement:", measurement, "Service:", serviceId);
-console.log("[queryMetrics] Query:", query);
-
 
   try {
     const rows = await queryApi.collectRows<MetricRow>(query);
@@ -42,6 +39,7 @@ export async function getPingMetrics(serviceId: string) {
     return {
       time: row._time,
       serviceId,
+      serviceName: row.serviceName || 'unknown', // <-- corrigido
       packets_transmitted: transmitted,
       packets_received: received,
       percent_packet_loss: row.percent_packet_loss || 0,
@@ -56,6 +54,7 @@ export async function getPingMetrics(serviceId: string) {
     throw error;
   }
 }
+
 
 export async function getSnmpMetrics(serviceId: string) {
   try {
@@ -159,6 +158,8 @@ export async function getHttpMetrics(serviceId: string) {
 
     return {
       time: row._time,
+      serviceId,
+      serviceName: row.serviceName || 'unknown', // <-- adicionado
       status: row.status || 'unknown',
       httpStatus: row.httpStatus || 0,
       ip: row.ip || '',
@@ -176,6 +177,7 @@ export async function getHttpMetrics(serviceId: string) {
     throw new Error(`Erro ao buscar métricas HTTP: ${error.message}`);
   }
 }
+
 
 export async function getWebhookMetrics(serviceId: string) {
   try {

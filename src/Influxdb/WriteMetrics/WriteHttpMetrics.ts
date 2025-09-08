@@ -1,10 +1,10 @@
 import { Point } from '@influxdata/influxdb-client';
 import { writeApi } from "../influxdb"
 
-export function writeHttpMetrics(serviceId: string, data: any)
-{
+export function writeHttpMetrics(serviceId: string, data: any) {
   const point = new Point("http_metrics")
     .tag("serviceId", serviceId)
+    .tag("serviceName", data.serviceName ?? "") // <-- adicionado
     .stringField("status", data.status ?? "")
     .intField("httpStatus", data.httpStatus ?? 0)
     .stringField("ip", data.ip ?? "")
@@ -18,6 +18,7 @@ export function writeHttpMetrics(serviceId: string, data: any)
     Object.entries(data.headers).forEach(([key, value]) => {
       const headerPoint = new Point("service_http_header")
         .tag("serviceId", serviceId)
+        .tag("serviceName", data.serviceName ?? "") // <-- também aqui
         .tag("header", key)
         .stringField("value", String(value))
         .timestamp(new Date());

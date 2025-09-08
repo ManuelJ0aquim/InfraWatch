@@ -6,18 +6,41 @@ import { analyzeSnmpIssue } from "../../Analyzers/analyzeSnmpIssue";
 import { writeSnmpMetrics } from "../../Influxdb/WriteMetrics/WriteSnmpMetrics";
 import { writePingMetrics } from "../../Influxdb/WriteMetrics/WritePingMetrics";
 import { writeHttpMetrics } from "../../Influxdb/WriteMetrics/WriteHttpMetrics";
+import { PrismaClient } from '@prisma/client';
 
-export async function processProxyData(data: any): Promise<Problem[]>
-{
+const prisma = new PrismaClient();
+
+export async function processProxyData(data: any): Promise<Problem[]> {
   const io = getIO();
   const problems: Problem[] = [];
-  
+
   console.log(data)
-  
+
+  if (data?.serviceId)
+  {
+    const service = await prisma.service.findUnique(
+    {
+      where: { id: data.serviceId },
+      select: { name: true },
+    });
+    if (service)
+    {
+      data.serviceName = service.name;
+    }
+    else
+    {
+      data.serviceName = "unknown";
+    }
+  }
+  else
+  {
+    data.serviceName = "unknown";
+  }
+
   if (!data || !data.type) {
     problems.push({
-      serviceId: data?.id || "unknown",
-      serviceName: data?.target || "unknown",
+      serviceId: data?.serviceId || "unknown",
+      serviceName: data.serviceName,
       metric: "unknown",
       value: 0,
       status: "UNKNOWN",
@@ -29,37 +52,42 @@ export async function processProxyData(data: any): Promise<Problem[]>
     });
     return problems;
   }
-  
-  switch (data.type)
-  {
+
+  switch (data.type) {
     case "SNMP":
       io.emit("snmpService", data);
       await writeSnmpMetrics(data.serviceId, data);
-      const snmpAnalysis = await analyzeSnmpIssue({ id: data.serviceId, name: data.target }, data);
-      if (snmpAnalysis)
-        problems.push(snmpAnalysis);
-      break;
-      
-      case "PING":
-        io.emit("pingService", data);
-        await writePingMetrics(data.serviceId, data);
-        const pingAnalysis = analyzePingIssue({ id: data.serviceId, name: data.target }, data);
-        if (pingAnalysis)
-          problems.push(pingAnalysis);
+      const snmpAnalysis = await analyzeSnmpIssue(
+        { id: data.serviceId, name: data.serviceName },
+        data
+      );
+      if (snmpAnalysis) problems.push(snmpAnalysis);
       break;
 
-      case "HTTP":
+    case "PING":
+      io.emit("pingService", data);
+      await writePingMetrics(data.serviceId, data);
+      const pingAnalysis = analyzePingIssue(
+        { id: data.serviceId, name: data.serviceName },
+        data
+      );
+      if (pingAnalysis) problems.push(pingAnalysis);
+      break;
+
+    case "HTTP":
       io.emit("httpService", data);
       await writeHttpMetrics(data.serviceId, data);
-      const httpAnalysis = analyzeHttpIssue({ id: data.serviceId, name: data.target }, data);
-      if (httpAnalysis)
-        problems.push(httpAnalysis);
+      const httpAnalysis = analyzeHttpIssue(
+        { id: data.serviceId, name: data.serviceName },
+        data
+      );
+      if (httpAnalysis) problems.push(httpAnalysis);
       break;
-    
+
     default:
       problems.push({
         serviceId: data.serviceId,
-        serviceName: data.target,
+        serviceName: data.serviceName,
         metric: "unknown",
         value: 0,
         status: "UNKNOWN",
@@ -70,6 +98,6 @@ export async function processProxyData(data: any): Promise<Problem[]>
         timestamp: new Date().toISOString(),
       });
   }
+
   return problems;
 }
-

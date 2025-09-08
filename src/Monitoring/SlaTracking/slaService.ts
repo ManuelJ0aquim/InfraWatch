@@ -96,4 +96,35 @@ export class SlaService {
     const { start, end } = this.parsePeriod(period);
     return await this.getSlaReport(serviceId, start, end);
   }
+
+  /**
+   * Gera histórico de uptime agregado por intervalo (dia ou hora).
+   */
+  static async getSlaHistory(
+    serviceId: string,
+    start: Date,
+    end: Date,
+    granularity: "day" | "hour" = "day"
+  ): Promise<Array<{ timestamp: string; uptime: number }>> {
+    const history: Array<{ timestamp: string; uptime: number }> = [];
+
+    const stepMs = granularity === "day" ? 86_400_000 : 3_600_000;
+
+    for (let t = start.getTime(); t < end.getTime(); t += stepMs) {
+      const slotStart = new Date(t);
+      const slotEnd = new Date(Math.min(t + stepMs, end.getTime()));
+
+      const slotSla = await SlaCalculator.calculate(serviceId, slotStart, slotEnd);
+
+      history.push({
+        timestamp:
+          granularity === "day"
+            ? slotStart.toISOString().split("T")[0] // yyyy-mm-dd
+            : slotStart.toISOString(),
+        uptime: Number(slotSla.uptimePercentage?.toFixed(2)),
+      });
+    }
+
+    return history;
+  }
 }

@@ -63,9 +63,9 @@ export async function slaRoutes(app: FastifyInstance)
       const service = await prisma.service.findUnique({ where: { id: serviceId } });
       if (!service) return reply.status(404).send({ error: "Serviço não encontrado" });
 
-      // Calcular período e gerar SLA
-      const { start, end } = (SlaService as any).parsePeriod(period);
+      const { start, end } = SlaService.parsePeriod(period);
       const sla = await SlaService.getSlaReport(serviceId, start, end);
+      const history = await SlaService.getSlaHistory(serviceId, start, end, "day");
 
       if (format === "pdf") {
         const pdfBuffer = await SlaReportGenerator.generatePDF(
@@ -84,7 +84,7 @@ export async function slaRoutes(app: FastifyInstance)
         return reply.send(pdfBuffer);
       }
 
-      return { service: service.name, period, sla };
+      return { service: service.name, period, sla, history };
     },
   });
 }
