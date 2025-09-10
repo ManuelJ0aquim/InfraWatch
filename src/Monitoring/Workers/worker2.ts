@@ -14,27 +14,29 @@ export async function processProxyData(data: any): Promise<Problem[]> {
   const io = getIO();
   const problems: Problem[] = [];
 
-  console.log(data)
 
   if (data?.serviceId)
   {
     const service = await prisma.service.findUnique(
     {
       where: { id: data.serviceId },
-      select: { name: true },
+      select: { name: true, target: true },
     });
     if (service)
     {
       data.serviceName = service.name;
+      data.target = service.target;
     }
     else
     {
       data.serviceName = "unknown";
+      data.target = "unknown";
     }
   }
   else
   {
     data.serviceName = "unknown";
+    data.target = "unknown";
   }
 
   if (!data || !data.type) {
@@ -52,6 +54,9 @@ export async function processProxyData(data: any): Promise<Problem[]> {
     });
     return problems;
   }
+
+  console.log(data)
+
 
   switch (data.type) {
     case "SNMP":
