@@ -98,6 +98,5 @@ export async function processProxyData(data: any): Promise<Problem[]> {
         timestamp: new Date().toISOString(),
       });
   }
-
   return problems;
 }

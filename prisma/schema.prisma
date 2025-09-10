@@ -46,13 +46,16 @@ model AlertContact {
   channel   String
   to        String
   active    Boolean  @default(true)
+  level     Int      @default(1)
   serviceId String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   Service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
   @@index([serviceId, active])
+  @@index([serviceId, level])
 }
+
 
 model Incident {
   id                 String    @id @default(uuid())
@@ -65,7 +68,6 @@ model Incident {
   glpiTicketId       String?
   glpiTicketUrl      String?
   service            Service   @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-
   @@index([serviceId, openedAt])
   @@index([serviceId, closedAt])
 }

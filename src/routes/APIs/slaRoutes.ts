@@ -1,6 +1,6 @@
 import { FastifyInstance } from "fastify";
-import { SlaService } from "../../Monitoring/SlaTracking/slaService";
-import { SlaReportGenerator } from "../../Monitoring/SlaTracking/slaReportGenerator";
+import { SlaService } from "../../Monitoring/slaTra/slaService";
+import { SlaReportGenerator } from "../../Monitoring/slaTra/slaReportGenerator";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();

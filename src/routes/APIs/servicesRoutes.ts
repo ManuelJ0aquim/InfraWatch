@@ -34,55 +34,82 @@ export async function servicesRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // 📌 ROTA: POST /api/addServices/:ownerId - Criar novo serviço
-  fastify.post('/api/addServices/:ownerId', {
-    schema: {
-      description: 'Adicionar novo serviço',
-      tags: ['Services'],
-      params: {
-        type: 'object',
-        properties: {
-          ownerId: { type: 'string', description: 'ID do usuário dono do serviço' }
-        },
-        required: ['ownerId']
+fastify.post('/api/addServices/:ownerId', {
+  schema: {
+    description: 'Adicionar novo serviço com contatos',
+    tags: ['Services'],
+    params: {
+      type: 'object',
+      properties: {
+        ownerId: { type: 'string', description: 'ID do usuário dono do serviço' }
       },
-      body: {
-        type: 'object',
-        required: ['name', 'type', 'target'],
-        properties: {
-          name: { type: 'string', description: 'Nome do serviço' },
-          type: { 
-            type: 'string', 
-            enum: ['HTTP', 'PING', 'SNMP', 'WEBHOOK'], 
-            description: 'Tipo de serviço a ser monitorado' 
-          },
-          target: { type: 'string', description: 'Endereço ou destino do serviço' }
-        }
-      },
-      response: {
-        201: {
-          description: 'Serviço criado com sucesso',
-          type: 'object',
-          properties: {
-            id: { type: 'string' },
-            name: { type: 'string' },
-            type: { type: 'string' },
-            target: { type: 'string' },
-            ownerId: { type: 'string' },
-            createdAt: { type: 'string', format: 'date-time' },
-            updatedAt: { type: 'string', format: 'date-time' },
-          }
+      required: ['ownerId']
+    },
+    body: {
+      type: 'object',
+      required: ['name', 'type', 'target', 'contacts'],
+      properties: {
+        name: { type: 'string', description: 'Nome do serviço' },
+        type: { 
+          type: 'string', 
+          enum: ['HTTP', 'PING', 'SNMP'], // removi WEBHOOK pq não existe no enum ServiceType
+          description: 'Tipo de serviço a ser monitorado' 
         },
-        400: {
-          description: 'Erro ao criar serviço',
-          type: 'object',
-          properties: {
-            message: { type: 'string' }
+        target: { type: 'string', description: 'Endereço ou destino do serviço' },
+        contacts: {
+          type: 'array',
+          description: 'Lista de contatos para notificações',
+          items: {
+            type: 'object',
+            required: ['channel', 'to'],
+            properties: {
+              channel: { type: 'string', enum: ['email', 'slack', 'telegram', 'twilio'] },
+              to: { type: 'string' },
+              active: { type: 'boolean', default: true }
+            }
           }
         }
       }
+    },
+    response: {
+      201: {
+        description: 'Serviço criado com sucesso',
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          name: { type: 'string' },
+          type: { type: 'string' },
+          target: { type: 'string' },
+          ownerId: { type: 'string' },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+          AlertContact: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                id: { type: 'string' },
+                channel: { type: 'string' },
+                to: { type: 'string' },
+                active: { type: 'boolean' },
+                createdAt: { type: 'string', format: 'date-time' },
+                updatedAt: { type: 'string', format: 'date-time' },
+              }
+            }
+          }
+        }
+      },
+      400: {
+        description: 'Erro ao criar serviço',
+        type: 'object',
+        properties: {
+          message: { type: 'string' }
+        }
+      }
     }
-  }, addService);
+  }
+}, addService);
+
 
   // 📌 ROTA: DELETE /api/deleteService/:ownerId/:serviceId - Deletar um serviço
   fastify.delete('/api/deleteService/:ownerId/:serviceId', {

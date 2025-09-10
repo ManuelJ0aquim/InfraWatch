@@ -1,4 +1,5 @@
 import { PrismaClient, NotificationPolicy } from '@prisma/client';
+import { Twilio } from 'twilio';
 const prisma = new PrismaClient();
 
 const FALLBACK: Pick<
@@ -10,7 +11,7 @@ const FALLBACK: Pick<
   escalateAfterMinutes: 10,
   cooldownMinutes: 15,
   recoveryConfirmations: 2,
-  channels: ['email'],
+  channels: ['email', 'slack', 'twilio', 'telegram'],
   active: true,
 };
 
