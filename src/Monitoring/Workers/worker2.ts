@@ -6,7 +6,7 @@ import { analyzeSnmpIssue } from "../../Analyzers/analyzeSnmpIssue";
 import { writeSnmpMetrics } from "../../Influxdb/WriteMetrics/WriteSnmpMetrics";
 import { writePingMetrics } from "../../Influxdb/WriteMetrics/WritePingMetrics";
 import { writeHttpMetrics } from "../../Influxdb/WriteMetrics/WriteHttpMetrics";
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -14,31 +14,42 @@ export async function processProxyData(data: any): Promise<Problem[]> {
   const io = getIO();
   const problems: Problem[] = [];
 
-
-  if (data?.serviceId)
-  {
-    const service = await prisma.service.findUnique(
-    {
+  // 🔹 Busca no banco para enriquecer dados
+  if (data?.serviceId) {
+    const service = await prisma.service.findUnique({
       where: { id: data.serviceId },
       select: { name: true, target: true },
     });
-    if (service)
-    {
+
+    if (service) {
       data.serviceName = service.name;
       data.target = service.target;
-    }
-    else
-    {
+
+      // garante também dentro de `data`
+      if (data.data) {
+        data.data.serviceName = service.name;
+        data.data.target = service.target;
+      }
+    } else {
       data.serviceName = "unknown";
       data.target = "unknown";
+
+      if (data.data) {
+        data.data.serviceName = "unknown";
+        data.data.target = "unknown";
+      }
     }
-  }
-  else
-  {
+  } else {
     data.serviceName = "unknown";
     data.target = "unknown";
+
+    if (data.data) {
+      data.data.serviceName = "unknown";
+      data.data.target = "unknown";
+    }
   }
 
+  // 🔹 Validação básica
   if (!data || !data.type) {
     problems.push({
       serviceId: data?.serviceId || "unknown",
@@ -55,9 +66,9 @@ export async function processProxyData(data: any): Promise<Problem[]> {
     return problems;
   }
 
-  console.log(data)
+  console.log(data);
 
-
+  // 🔹 Processamento por tipo de serviço
   switch (data.type) {
     case "SNMP":
       io.emit("snmpService", data);
@@ -103,5 +114,6 @@ export async function processProxyData(data: any): Promise<Problem[]> {
         timestamp: new Date().toISOString(),
       });
   }
+
   return problems;
 }

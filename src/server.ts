@@ -1,6 +1,5 @@
 import Fastify from "fastify";
 import fastifyCors from "fastify-cors";
-import localtunnel from 'localtunnel';
 import { initSocket } from './socket';
 import fastifySwagger from 'fastify-swagger';
 import { startMonitoring } from './Monitoring/Workers/worker';
@@ -39,14 +38,6 @@ const start = async () => {
     await server.listen(PORT, '0.0.0.0');
     console.log(`Servidor Fastify rodando em http://localhost:${PORT}`);
     console.log(`Documentação disponível em http://localhost:${PORT}/docs`);
-
-    const tunnel = await localtunnel({ port: PORT, subdomain: SUBDOMAIN });
-    console.log(`Servidor exposto publicamente em ${tunnel.url}`);
-    console.log(`Documentação disponível em ${tunnel.url}/docs`);
-
-    tunnel.on('close', () => {
-      console.log('Túnel Localtunnel fechado');
-    });
   }
   catch (err)
   {
