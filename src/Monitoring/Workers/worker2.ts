@@ -66,7 +66,7 @@ export async function processProxyData(data: any): Promise<Problem[]> {
     return problems;
   }
 
-  // console.log(data);
+  console.log(data);
 
   // 🔹 Processamento por tipo de serviço
   switch (data.type) {
