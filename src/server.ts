@@ -12,7 +12,6 @@ const server = Fastify({ logger: false });
 
 server.register(fastifyCors, {
   origin: [
-    "http://localhost:3000",
     "http://212.85.1.223:3000",
   ],
   methods: ["GET", "POST", "PUT", "DELETE"],
